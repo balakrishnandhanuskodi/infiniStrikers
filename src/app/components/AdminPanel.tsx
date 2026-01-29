@@ -52,12 +52,37 @@ export function AdminPanel({
     type: "group",
   });
 
+  // Format cricket overs: only allow .1 to .5 (6 balls per over)
+  // After .5, it should become next whole number (e.g., 1.5 -> 2.0)
+  const formatCricketOvers = (value: number): number => {
+    const wholeOvers = Math.floor(value);
+    const decimal = value - wholeOvers;
+    const balls = Math.round(decimal * 10); // Get balls (0-9 from decimal)
+
+    if (balls >= 6) {
+      // Roll over to next over
+      return wholeOvers + 1;
+    }
+    // Keep as X.balls format (max .5)
+    return wholeOvers + (balls / 10);
+  };
+
+  // Calculate total runs including fours (each 4 = 4 runs)
+  const calculateTotalRuns = (batting: BattingStats[]): number => {
+    return batting.reduce((sum, b) => {
+      const runsFromFours = (b.fours || 0) * 4;
+      const otherRuns = (b.runs || 0);
+      const extras = (b.extras || 0);
+      return sum + runsFromFours + otherRuns + extras;
+    }, 0);
+  };
+
   // Calculate totals from individual player stats
   const calculateTotals = (stats: TeamStats): TeamStats => {
-    const totalRuns = stats.batting.reduce((sum, b) => sum + (b.runs || 0) + (b.extras || 0), 0);
+    const totalRuns = calculateTotalRuns(stats.batting);
     const totalWickets = stats.bowling.reduce((sum, b) => sum + (b.wickets || 0), 0);
-    const overs = stats.bowling.reduce((sum, b) => sum + (b.overs || 0), 0);
-    return { ...stats, totalRuns, totalWickets, overs };
+    const overs = stats.bowling.reduce((sum, b) => sum + formatCricketOvers(b.overs || 0), 0);
+    return { ...stats, totalRuns, totalWickets, overs: formatCricketOvers(overs) };
   };
 
   const getDefaultStats = (match: Match): { teamA: TeamStats; teamB: TeamStats } => {
@@ -89,10 +114,11 @@ export function AdminPanel({
         };
       });
 
-      // Calculate totals from player stats
-      const totalRuns = batting.reduce((sum, b) => sum + b.runs + b.extras, 0);
+      // Calculate totals from player stats (including fours × 4)
+      const totalRuns = batting.reduce((sum, b) => sum + (b.fours * 4) + b.runs + b.extras, 0);
       const totalWickets = bowling.reduce((sum, b) => sum + b.wickets, 0);
-      const overs = bowling.reduce((sum, b) => sum + b.overs, 0);
+      const rawOvers = bowling.reduce((sum, b) => sum + b.overs, 0);
+      const overs = formatCricketOvers(rawOvers);
 
       return { batting, bowling, totalRuns, totalWickets, overs };
     };
@@ -124,8 +150,8 @@ export function AdminPanel({
     newStats[team] = {
       ...newStats[team],
       batting,
-      // Auto-calculate total runs from batting stats (runs + extras)
-      totalRuns: batting.reduce((sum, b) => sum + (b.runs || 0) + (b.extras || 0), 0),
+      // Auto-calculate total runs: (fours × 4) + runs + extras
+      totalRuns: batting.reduce((sum, b) => sum + ((b.fours || 0) * 4) + (b.runs || 0) + (b.extras || 0), 0),
     };
     setMatchStats((prev) => ({ ...prev, [matchId]: newStats }));
   };
@@ -134,13 +160,24 @@ export function AdminPanel({
     const stats = getMatchStats(matchId);
     const newStats = { ...stats };
     const bowling = [...newStats[team].bowling];
-    bowling[playerIndex] = { ...bowling[playerIndex], [field]: field === "player" ? value : parseFloat(value) || 0 };
+
+    // Format overs value for cricket (max .5 per over)
+    let parsedValue: string | number = field === "player" ? value : parseFloat(value) || 0;
+    if (field === "overs" && typeof parsedValue === "number") {
+      parsedValue = formatCricketOvers(parsedValue);
+    }
+
+    bowling[playerIndex] = { ...bowling[playerIndex], [field]: parsedValue };
+
+    // Calculate total overs with proper cricket formatting
+    const rawTotalOvers = bowling.reduce((sum, b) => sum + (b.overs || 0), 0);
+
     newStats[team] = {
       ...newStats[team],
       bowling,
       // Auto-calculate wickets and overs from bowling stats
       totalWickets: bowling.reduce((sum, b) => sum + (b.wickets || 0), 0),
-      overs: bowling.reduce((sum, b) => sum + (b.overs || 0), 0),
+      overs: formatCricketOvers(rawTotalOvers),
     };
     setMatchStats((prev) => ({ ...prev, [matchId]: newStats }));
   };
