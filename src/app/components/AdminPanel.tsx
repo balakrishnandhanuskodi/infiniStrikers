@@ -52,17 +52,50 @@ export function AdminPanel({
     type: "group",
   });
 
+  // Calculate totals from individual player stats
+  const calculateTotals = (stats: TeamStats): TeamStats => {
+    const totalRuns = stats.batting.reduce((sum, b) => sum + (b.runs || 0) + (b.extras || 0), 0);
+    const totalWickets = stats.bowling.reduce((sum, b) => sum + (b.wickets || 0), 0);
+    const overs = stats.bowling.reduce((sum, b) => sum + (b.overs || 0), 0);
+    return { ...stats, totalRuns, totalWickets, overs };
+  };
+
   const getDefaultStats = (match: Match): { teamA: TeamStats; teamB: TeamStats } => {
     const teamAPlayers = teams.find((t) => t.name === match.teamA)?.players || [];
     const teamBPlayers = teams.find((t) => t.name === match.teamB)?.players || [];
 
-    const createDefaultTeamStats = (players: string[], existingStats?: TeamStats): TeamStats => ({
-      batting: existingStats?.batting || players.map((p) => ({ player: p, runs: 0, balls: 0, fours: 0, extras: 0 })),
-      bowling: existingStats?.bowling || players.map((p) => ({ player: p, overs: 0, maidens: 0, runs: 0, wickets: 0 })),
-      totalRuns: existingStats?.totalRuns || 0,
-      totalWickets: existingStats?.totalWickets || 0,
-      overs: existingStats?.overs || 0,
-    });
+    // Always sync player names from teams while preserving their scores
+    const createDefaultTeamStats = (players: string[], existingStats?: TeamStats): TeamStats => {
+      // Merge team player names with existing stats data
+      const batting = players.map((playerName, idx) => {
+        const existingBatting = existingStats?.batting?.[idx];
+        return {
+          player: playerName, // Always use current team player name
+          runs: existingBatting?.runs || 0,
+          balls: existingBatting?.balls || 0,
+          fours: existingBatting?.fours || 0,
+          extras: existingBatting?.extras || 0,
+        };
+      });
+
+      const bowling = players.map((playerName, idx) => {
+        const existingBowling = existingStats?.bowling?.[idx];
+        return {
+          player: playerName, // Always use current team player name
+          overs: existingBowling?.overs || 0,
+          maidens: existingBowling?.maidens || 0,
+          runs: existingBowling?.runs || 0,
+          wickets: existingBowling?.wickets || 0,
+        };
+      });
+
+      // Calculate totals from player stats
+      const totalRuns = batting.reduce((sum, b) => sum + b.runs + b.extras, 0);
+      const totalWickets = bowling.reduce((sum, b) => sum + b.wickets, 0);
+      const overs = bowling.reduce((sum, b) => sum + b.overs, 0);
+
+      return { batting, bowling, totalRuns, totalWickets, overs };
+    };
 
     return {
       teamA: createDefaultTeamStats(teamAPlayers, match.teamAStats),
@@ -88,7 +121,12 @@ export function AdminPanel({
     const newStats = { ...stats };
     const batting = [...newStats[team].batting];
     batting[playerIndex] = { ...batting[playerIndex], [field]: field === "player" ? value : parseFloat(value) || 0 };
-    newStats[team].batting = batting;
+    newStats[team] = {
+      ...newStats[team],
+      batting,
+      // Auto-calculate total runs from batting stats (runs + extras)
+      totalRuns: batting.reduce((sum, b) => sum + (b.runs || 0) + (b.extras || 0), 0),
+    };
     setMatchStats((prev) => ({ ...prev, [matchId]: newStats }));
   };
 
@@ -97,10 +135,17 @@ export function AdminPanel({
     const newStats = { ...stats };
     const bowling = [...newStats[team].bowling];
     bowling[playerIndex] = { ...bowling[playerIndex], [field]: field === "player" ? value : parseFloat(value) || 0 };
-    newStats[team].bowling = bowling;
+    newStats[team] = {
+      ...newStats[team],
+      bowling,
+      // Auto-calculate wickets and overs from bowling stats
+      totalWickets: bowling.reduce((sum, b) => sum + (b.wickets || 0), 0),
+      overs: bowling.reduce((sum, b) => sum + (b.overs || 0), 0),
+    };
     setMatchStats((prev) => ({ ...prev, [matchId]: newStats }));
   };
 
+  // Keep manual override option but show it's auto-calculated
   const updateTeamTotal = (matchId: string, team: "teamA" | "teamB", field: "totalRuns" | "totalWickets" | "overs", value: string) => {
     const stats = getMatchStats(matchId);
     const newStats = { ...stats };
@@ -289,38 +334,25 @@ export function AdminPanel({
 
                       {(["teamA", "teamB"] as const).map((team) => (
                         <TabsContent key={team} value={team} className="space-y-4">
-                          {/* Team Totals */}
+                          {/* Team Totals - Auto-calculated */}
                           <div className={`grid grid-cols-3 gap-3 p-3 rounded-lg ${team === "teamA" ? "bg-blue-100 border-2 border-blue-300" : "bg-orange-100 border-2 border-orange-300"}`}>
                             <div>
-                              <Label htmlFor={`${team}-totalRuns`} className="text-xs">Total Runs</Label>
-                              <Input
-                                id={`${team}-totalRuns`}
-                                type="number"
-                                value={stats[team].totalRuns}
-                                onChange={(e) => updateTeamTotal(selectedMatch, team, "totalRuns", e.target.value)}
-                                className="h-9"
-                              />
+                              <Label className="text-xs">Total Runs (auto)</Label>
+                              <div className="h-9 flex items-center px-3 bg-white border rounded-md font-semibold text-lg">
+                                {stats[team].totalRuns}
+                              </div>
                             </div>
                             <div>
-                              <Label htmlFor={`${team}-totalWickets`} className="text-xs">Wickets</Label>
-                              <Input
-                                id={`${team}-totalWickets`}
-                                type="number"
-                                value={stats[team].totalWickets}
-                                onChange={(e) => updateTeamTotal(selectedMatch, team, "totalWickets", e.target.value)}
-                                className="h-9"
-                              />
+                              <Label className="text-xs">Wickets (auto)</Label>
+                              <div className="h-9 flex items-center px-3 bg-white border rounded-md font-semibold text-lg">
+                                {stats[team].totalWickets}
+                              </div>
                             </div>
                             <div>
-                              <Label htmlFor={`${team}-overs`} className="text-xs">Overs</Label>
-                              <Input
-                                id={`${team}-overs`}
-                                type="number"
-                                step="0.1"
-                                value={stats[team].overs}
-                                onChange={(e) => updateTeamTotal(selectedMatch, team, "overs", e.target.value)}
-                                className="h-9"
-                              />
+                              <Label className="text-xs">Overs (auto)</Label>
+                              <div className="h-9 flex items-center px-3 bg-white border rounded-md font-semibold text-lg">
+                                {stats[team].overs}
+                              </div>
                             </div>
                           </div>
 
