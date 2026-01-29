@@ -20,6 +20,7 @@ interface AdminPanelProps {
   teams: Team[];
   onUpdateMatch: (matchId: string, teamAStats: TeamStats, teamBStats: TeamStats, status: Match["status"]) => void;
   onUpdateTeam: (teamName: string, players: string[]) => void;
+  onRenameTeam?: (oldName: string, newName: string) => void;
   onLogout: () => void;
   onSeedData?: () => void;
   onAddMatch?: (matchData: { date: string; matchNumber: number; teamA: string; teamB: string; type: string }) => void;
@@ -27,11 +28,25 @@ interface AdminPanelProps {
   isLoading?: boolean;
 }
 
+// Parse date string like "9th February" to a sortable number
+const parseDateString = (dateStr: string): number => {
+  const months: Record<string, number> = {
+    january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
+    july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
+  };
+  const dayMatch = dateStr.match(/(\d+)/);
+  const day = dayMatch ? parseInt(dayMatch[1]) : 0;
+  const monthMatch = dateStr.toLowerCase().match(/(january|february|march|april|may|june|july|august|september|october|november|december)/);
+  const month = monthMatch ? months[monthMatch[1]] : 0;
+  return month * 100 + day;
+};
+
 export function AdminPanel({
   matches,
   teams,
   onUpdateMatch,
   onUpdateTeam,
+  onRenameTeam,
   onLogout,
   onSeedData,
   onAddMatch,
@@ -41,6 +56,14 @@ export function AdminPanel({
   const [selectedMatch, setSelectedMatch] = useState<string>("");
   const [editingTeams, setEditingTeams] = useState<Record<string, string[]>>({});
   const [editingTeamNames, setEditingTeamNames] = useState<Record<string, string>>({});
+
+  // Sort matches by date (ascending)
+  const sortedMatches = [...matches].sort((a, b) => {
+    const dateA = parseDateString(a.date);
+    const dateB = parseDateString(b.date);
+    if (dateA !== dateB) return dateA - dateB;
+    return a.matchNumber - b.matchNumber;
+  });
 
   // New match form state
   const [showAddMatch, setShowAddMatch] = useState(false);
@@ -212,10 +235,25 @@ export function AdminPanel({
     }));
   };
 
-  const handleSaveTeam = (teamName: string) => {
-    const players = editingTeams[teamName];
+  const handleSaveTeam = (originalTeamName: string) => {
+    const players = editingTeams[originalTeamName];
+    const newTeamName = editingTeamNames[originalTeamName];
+
+    // If team name changed, rename first
+    if (newTeamName && newTeamName.trim() !== originalTeamName && onRenameTeam) {
+      onRenameTeam(originalTeamName, newTeamName.trim());
+      // Clear the editing state after rename
+      setEditingTeamNames((prev) => {
+        const updated = { ...prev };
+        delete updated[originalTeamName];
+        return updated;
+      });
+    }
+
+    // Update players
     if (players) {
-      onUpdateTeam(teamName, players.filter((p) => p.trim() !== ""));
+      const teamToUpdate = newTeamName?.trim() || originalTeamName;
+      onUpdateTeam(teamToUpdate, players.filter((p) => p.trim() !== ""));
     }
   };
 
@@ -315,7 +353,7 @@ export function AdminPanel({
                         <SelectValue placeholder="Choose a match..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {matches.map((match) => (
+                        {sortedMatches.map((match) => (
                           <SelectItem key={match.id} value={match.id}>
                             {match.date} - Match {match.matchNumber}: {match.teamA} vs {match.teamB}
                           </SelectItem>
@@ -654,11 +692,11 @@ export function AdminPanel({
                     </div>
                   )}
 
-                  {matches.length === 0 ? (
+                  {sortedMatches.length === 0 ? (
                     <p className="text-gray-500 text-center py-4">No matches scheduled yet.</p>
                   ) : (
                     <div className="space-y-2">
-                      {matches.map((match) => (
+                      {sortedMatches.map((match) => (
                         <div key={match.id} className="flex justify-between items-center p-3 border rounded-lg">
                           <div>
                             <p className="font-medium">{match.teamA} vs {match.teamB}</p>

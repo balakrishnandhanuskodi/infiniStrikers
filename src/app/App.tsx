@@ -267,6 +267,44 @@ function AdminPage() {
     }
   };
 
+  // Handle team name rename (also updates all matches referencing this team)
+  const handleRenameTeam = async (oldName: string, newName: string) => {
+    if (!newName.trim() || oldName === newName) return;
+
+    const team = dbTeams.find(t => t.name === oldName);
+    if (!team) {
+      toast.error("Team not found");
+      return;
+    }
+
+    // Update team name
+    const { error: teamError } = await supabase
+      .from("teams")
+      .update({ name: newName.trim() })
+      .eq("id", team.id);
+
+    if (teamError) {
+      console.error("Rename team error:", teamError);
+      toast.error("Failed to rename team: " + teamError.message);
+      return;
+    }
+
+    // Update all matches that reference this team (team_a or team_b)
+    const matchesToUpdateA = dbMatches.filter(m => m.team_a === oldName);
+    const matchesToUpdateB = dbMatches.filter(m => m.team_b === oldName);
+
+    for (const match of matchesToUpdateA) {
+      await supabase.from("matches").update({ team_a: newName.trim() }).eq("id", match.id);
+    }
+    for (const match of matchesToUpdateB) {
+      await supabase.from("matches").update({ team_b: newName.trim() }).eq("id", match.id);
+    }
+
+    toast.success(`Team renamed from "${oldName}" to "${newName}"!`);
+    await refetchTeams();
+    await refetchMatches();
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-700 flex items-center justify-center">
@@ -290,6 +328,7 @@ function AdminPage() {
       teams={teams}
       onUpdateMatch={handleUpdateMatch}
       onUpdateTeam={handleUpdateTeam}
+      onRenameTeam={handleRenameTeam}
       onLogout={handleLogout}
       onSeedData={handleSeedData}
       onAddMatch={handleAddMatch}
