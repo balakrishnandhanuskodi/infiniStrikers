@@ -1,10 +1,10 @@
 import { useState } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { PublicFixtures, Match as UIMatch, TeamStats } from "@/app/components/PublicFixtures";
 import { AdminLogin } from "@/app/components/AdminLogin";
 import { AdminPanel } from "@/app/components/AdminPanel";
-import { Button } from "@/app/components/ui/button";
 import { Toaster } from "@/app/components/ui/sonner";
-import { Shield, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useMatches, useTeams } from "@/lib/hooks/useSupabase";
 import { supabase } from "@/lib/supabase";
@@ -16,31 +16,52 @@ interface Team {
   players: string[];
 }
 
-function App() {
+// Default data
+const defaultMatches: UIMatch[] = [
+  { id: "1", date: "9th February", matchNumber: 1, teamA: "Team A", teamB: "Team C", status: "scheduled", type: "group" },
+  { id: "2", date: "9th February", matchNumber: 2, teamA: "Team B", teamB: "Team C", status: "scheduled", type: "group" },
+  { id: "3", date: "9th February", matchNumber: 3, teamA: "Team A", teamB: "Team B", status: "scheduled", type: "group" },
+  { id: "4", date: "10th February", matchNumber: 1, teamA: "Team A", teamB: "Team B", status: "scheduled", type: "group" },
+  { id: "5", date: "10th February", matchNumber: 2, teamA: "Team A", teamB: "Team C", status: "scheduled", type: "group" },
+  { id: "6", date: "10th February", matchNumber: 3, teamA: "Team B", teamB: "Team C", status: "scheduled", type: "group" },
+  { id: "7", date: "11th February", matchNumber: 1, teamA: "Place 2", teamB: "Place 3", status: "scheduled", type: "semi-final" },
+  { id: "8", date: "11th February", matchNumber: 2, teamA: "Place 1", teamB: "Winner of SF", status: "scheduled", type: "final" },
+];
+
+const defaultTeams: Team[] = [
+  { id: "1", name: "Team A", players: ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5"] },
+  { id: "2", name: "Team B", players: ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5"] },
+  { id: "3", name: "Team C", players: ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5"] },
+];
+
+// Public page component
+function PublicPage() {
+  const { matches: dbMatches } = useMatches();
+
+  const matches: UIMatch[] = dbMatches.length > 0
+    ? dbMatches.map(m => ({
+        id: m.id,
+        date: m.date,
+        matchNumber: m.match_number,
+        teamA: m.team_a,
+        teamB: m.team_b,
+        status: m.status,
+        type: m.match_type,
+        teamAStats: m.team_a_stats || undefined,
+        teamBStats: m.team_b_stats || undefined,
+      }))
+    : defaultMatches;
+
+  return <PublicFixtures matches={matches} />;
+}
+
+// Admin page component
+function AdminPage() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const [showLogin, setShowLogin] = useState(false);
   const [loginError, setLoginError] = useState("");
 
-  const { matches: dbMatches, loading: matchesLoading, refetch: refetchMatches } = useMatches();
-  const { teams: dbTeams, loading: teamsLoading, refetch: refetchTeams } = useTeams();
-
-  // Default matches if none in database
-  const defaultMatches: UIMatch[] = [
-    { id: "1", date: "9th February", matchNumber: 1, teamA: "Team A", teamB: "Team C", status: "scheduled", type: "group" },
-    { id: "2", date: "9th February", matchNumber: 2, teamA: "Team B", teamB: "Team C", status: "scheduled", type: "group" },
-    { id: "3", date: "9th February", matchNumber: 3, teamA: "Team A", teamB: "Team B", status: "scheduled", type: "group" },
-    { id: "4", date: "10th February", matchNumber: 1, teamA: "Team A", teamB: "Team B", status: "scheduled", type: "group" },
-    { id: "5", date: "10th February", matchNumber: 2, teamA: "Team A", teamB: "Team C", status: "scheduled", type: "group" },
-    { id: "6", date: "10th February", matchNumber: 3, teamA: "Team B", teamB: "Team C", status: "scheduled", type: "group" },
-    { id: "7", date: "11th February", matchNumber: 1, teamA: "Place 2", teamB: "Place 3", status: "scheduled", type: "semi-final" },
-    { id: "8", date: "11th February", matchNumber: 2, teamA: "Place 1", teamB: "Winner of SF", status: "scheduled", type: "final" },
-  ];
-
-  const defaultTeams: Team[] = [
-    { id: "1", name: "Team A", players: ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5"] },
-    { id: "2", name: "Team B", players: ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5"] },
-    { id: "3", name: "Team C", players: ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5"] },
-  ];
+  const { matches: dbMatches, refetch: refetchMatches } = useMatches();
+  const { teams: dbTeams, refetch: refetchTeams } = useTeams();
 
   // Convert database matches to UI format
   const matches: UIMatch[] = dbMatches.length > 0
@@ -75,7 +96,6 @@ function App() {
     if (error) {
       setLoginError(error.message);
     } else {
-      setShowLogin(false);
       setLoginError("");
       toast.success("Logged in successfully!");
     }
@@ -95,7 +115,6 @@ function App() {
     const dbMatch = dbMatches.find(m => m.id === matchId);
 
     if (dbMatch) {
-      // Update existing match
       const { error } = await supabase
         .from("matches")
         .update({
@@ -112,7 +131,6 @@ function App() {
         await refetchMatches();
       }
     } else {
-      // Match not in database - find from defaults and create it
       const defaultMatch = defaultMatches.find(m => m.id === matchId);
       if (defaultMatch) {
         const { error } = await supabase
@@ -144,7 +162,6 @@ function App() {
     const team = dbTeams.find(t => t.name === teamName);
 
     if (team) {
-      // Update existing team
       const { error } = await supabase
         .from("teams")
         .update({ players })
@@ -157,7 +174,6 @@ function App() {
         await refetchTeams();
       }
     } else {
-      // Create new team if it doesn't exist in database
       const { error } = await supabase
         .from("teams")
         .insert({ name: teamName, players });
@@ -171,7 +187,6 @@ function App() {
     }
   };
 
-  // Show loading state
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-700 flex items-center justify-center">
@@ -183,38 +198,30 @@ function App() {
     );
   }
 
-  if (showLogin) {
+  if (!user) {
     return <AdminLogin onLogin={handleLogin} error={loginError} />;
   }
 
-  if (user) {
-    return (
-      <>
-        <AdminPanel
-          matches={matches}
-          teams={teams}
-          onUpdateMatch={handleUpdateMatch}
-          onUpdateTeam={handleUpdateTeam}
-          onLogout={handleLogout}
-        />
-        <Toaster />
-      </>
-    );
-  }
+  return (
+    <AdminPanel
+      matches={matches}
+      teams={teams}
+      onUpdateMatch={handleUpdateMatch}
+      onUpdateTeam={handleUpdateTeam}
+      onLogout={handleLogout}
+    />
+  );
+}
 
+// Main App with routing
+function App() {
   return (
     <>
-      <div className="relative">
-        <Button
-          className="fixed top-4 right-4 z-50 shadow-lg"
-          onClick={() => setShowLogin(true)}
-          size="sm"
-        >
-          <Shield className="w-4 h-4 mr-2" />
-          Admin
-        </Button>
-        <PublicFixtures matches={matches} />
-      </div>
+      <Routes>
+        <Route path="/" element={<PublicPage />} />
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
       <Toaster />
     </>
   );
