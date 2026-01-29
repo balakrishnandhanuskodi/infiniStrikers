@@ -388,7 +388,7 @@ export function AdminPanel({
                     <div>
                       <Label className="text-sm mb-2 block">Match Status</Label>
                       <div className="flex gap-2">
-                        {(["scheduled", "live", "completed"] as const).map((status) => (
+                        {(["live", "completed"] as const).map((status) => (
                           <Button
                             key={status}
                             variant={(matchStatus[selectedMatch] || selectedMatchData.status) === status ? "default" : "outline"}
@@ -438,8 +438,8 @@ export function AdminPanel({
                             </h4>
                             <div className="space-y-2">
                               {stats[team].batting.map((player, idx) => (
-                                <div key={idx} className="grid grid-cols-6 gap-2 p-2 bg-white border rounded">
-                                  <div className="col-span-2">
+                                <div key={idx} className="flex gap-2 p-2 bg-white border rounded items-end">
+                                  <div className="flex-1 min-w-0">
                                     <Label className="text-xs text-gray-500">Player</Label>
                                     <Input
                                       value={player.player}
@@ -448,7 +448,7 @@ export function AdminPanel({
                                       placeholder="Player name"
                                     />
                                   </div>
-                                  <div>
+                                  <div className="w-16">
                                     <Label className="text-xs text-gray-500">Runs</Label>
                                     <Input
                                       type="number"
@@ -457,7 +457,7 @@ export function AdminPanel({
                                       className="h-8"
                                     />
                                   </div>
-                                  <div>
+                                  <div className="w-16">
                                     <Label className="text-xs text-gray-500">Balls</Label>
                                     <Input
                                       type="number"
@@ -466,7 +466,7 @@ export function AdminPanel({
                                       className="h-8"
                                     />
                                   </div>
-                                  <div>
+                                  <div className="w-14">
                                     <Label className="text-xs text-gray-500">4s</Label>
                                     <Input
                                       type="number"
@@ -475,7 +475,7 @@ export function AdminPanel({
                                       className="h-8"
                                     />
                                   </div>
-                                  <div>
+                                  <div className="w-16">
                                     <Label className="text-xs text-gray-500">Extras</Label>
                                     <Input
                                       type="number"
@@ -484,6 +484,15 @@ export function AdminPanel({
                                       className="h-8"
                                     />
                                   </div>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => handleSaveMatch(selectedMatch)}
+                                    title="Save"
+                                  >
+                                    <Save className="h-4 w-4" />
+                                  </Button>
                                 </div>
                               ))}
                             </div>
@@ -496,8 +505,8 @@ export function AdminPanel({
                             </h4>
                             <div className="space-y-2">
                               {stats[team].bowling.map((player, idx) => (
-                                <div key={idx} className="grid grid-cols-6 gap-2 p-2 bg-white border rounded">
-                                  <div className="col-span-2">
+                                <div key={idx} className="flex gap-2 p-2 bg-white border rounded items-end">
+                                  <div className="flex-1 min-w-0">
                                     <Label className="text-xs text-gray-500">Player</Label>
                                     <Input
                                       value={player.player}
@@ -506,7 +515,7 @@ export function AdminPanel({
                                       placeholder="Player name"
                                     />
                                   </div>
-                                  <div>
+                                  <div className="w-16">
                                     <Label className="text-xs text-gray-500">Overs</Label>
                                     <Input
                                       type="number"
@@ -516,7 +525,7 @@ export function AdminPanel({
                                       className="h-8"
                                     />
                                   </div>
-                                  <div>
+                                  <div className="w-16">
                                     <Label className="text-xs text-gray-500">Maidens</Label>
                                     <Input
                                       type="number"
@@ -525,7 +534,7 @@ export function AdminPanel({
                                       className="h-8"
                                     />
                                   </div>
-                                  <div>
+                                  <div className="w-14">
                                     <Label className="text-xs text-gray-500">Runs</Label>
                                     <Input
                                       type="number"
@@ -534,7 +543,7 @@ export function AdminPanel({
                                       className="h-8"
                                     />
                                   </div>
-                                  <div>
+                                  <div className="w-16">
                                     <Label className="text-xs text-gray-500">Wickets</Label>
                                     <Input
                                       type="number"
@@ -543,6 +552,15 @@ export function AdminPanel({
                                       className="h-8"
                                     />
                                   </div>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => handleSaveMatch(selectedMatch)}
+                                    title="Save"
+                                  >
+                                    <Save className="h-4 w-4" />
+                                  </Button>
                                 </div>
                               ))}
                             </div>
