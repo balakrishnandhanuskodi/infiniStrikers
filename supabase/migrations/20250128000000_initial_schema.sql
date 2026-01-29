@@ -45,22 +45,22 @@ CREATE POLICY "Allow public read access on matches" ON public.matches
 
 -- Admin write access policies (authenticated users)
 CREATE POLICY "Allow authenticated insert on teams" ON public.teams
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Allow authenticated update on teams" ON public.teams
-  FOR UPDATE USING (auth.role() = 'authenticated');
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Allow authenticated delete on teams" ON public.teams
-  FOR DELETE USING (auth.role() = 'authenticated');
+  FOR DELETE USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Allow authenticated insert on matches" ON public.matches
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Allow authenticated update on matches" ON public.matches
-  FOR UPDATE USING (auth.role() = 'authenticated');
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Allow authenticated delete on matches" ON public.matches
-  FOR DELETE USING (auth.role() = 'authenticated');
+  FOR DELETE USING (auth.uid() IS NOT NULL);
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
