@@ -90,13 +90,12 @@ export function AdminPanel({
     return wholeOvers + (balls / 10);
   };
 
-  // Calculate total runs including fours (each 4 = 4 runs)
+  // Calculate total runs (runs + extras only, 4s is just a count)
   const calculateTotalRuns = (batting: BattingStats[]): number => {
     return batting.reduce((sum, b) => {
-      const runsFromFours = (b.fours || 0) * 4;
-      const otherRuns = (b.runs || 0);
+      const runs = (b.runs || 0);
       const extras = (b.extras || 0);
-      return sum + runsFromFours + otherRuns + extras;
+      return sum + runs + extras;
     }, 0);
   };
 
@@ -137,8 +136,8 @@ export function AdminPanel({
         };
       });
 
-      // Calculate totals from player stats (including fours × 4)
-      const totalRuns = batting.reduce((sum, b) => sum + (b.fours * 4) + b.runs + b.extras, 0);
+      // Calculate totals from player stats (runs + extras only)
+      const totalRuns = batting.reduce((sum, b) => sum + b.runs + b.extras, 0);
       const totalWickets = bowling.reduce((sum, b) => sum + b.wickets, 0);
       const rawOvers = bowling.reduce((sum, b) => sum + b.overs, 0);
       const overs = formatCricketOvers(rawOvers);
@@ -173,8 +172,8 @@ export function AdminPanel({
     newStats[team] = {
       ...newStats[team],
       batting,
-      // Auto-calculate total runs: (fours × 4) + runs + extras
-      totalRuns: batting.reduce((sum, b) => sum + ((b.fours || 0) * 4) + (b.runs || 0) + (b.extras || 0), 0),
+      // Auto-calculate total runs: runs + extras (4s is just a count)
+      totalRuns: batting.reduce((sum, b) => sum + (b.runs || 0) + (b.extras || 0), 0),
     };
     setMatchStats((prev) => ({ ...prev, [matchId]: newStats }));
   };
@@ -388,7 +387,7 @@ export function AdminPanel({
                     <div>
                       <Label className="text-sm mb-2 block">Match Status</Label>
                       <div className="flex gap-2">
-                        {(["live", "completed"] as const).map((status) => (
+                        {(["scheduled", "live", "completed"] as const).map((status) => (
                           <Button
                             key={status}
                             variant={(matchStatus[selectedMatch] || selectedMatchData.status) === status ? "default" : "outline"}
