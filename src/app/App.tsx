@@ -106,25 +106,54 @@ function AdminPage() {
     toast.success("Logged out successfully!");
   };
 
+  // Helper to sanitize stats objects (remove undefined values)
+  const sanitizeStats = (stats: TeamStats | null | undefined): TeamStats | null => {
+    if (!stats) return null;
+    return {
+      batting: stats.batting?.map(b => ({
+        player: b.player || "",
+        runs: b.runs ?? 0,
+        balls: b.balls ?? 0,
+        fours: b.fours ?? 0,
+        extras: b.extras ?? 0,
+      })) || [],
+      bowling: stats.bowling?.map(b => ({
+        player: b.player || "",
+        overs: b.overs ?? 0,
+        maidens: b.maidens ?? 0,
+        runs: b.runs ?? 0,
+        wickets: b.wickets ?? 0,
+      })) || [],
+      totalRuns: stats.totalRuns ?? 0,
+      totalWickets: stats.totalWickets ?? 0,
+      overs: stats.overs ?? 0,
+    };
+  };
+
   const handleUpdateMatch = async (
     matchId: string,
     teamAStats: TeamStats,
     teamBStats: TeamStats,
     status: UIMatch["status"]
   ) => {
+    // Sanitize stats to remove undefined values
+    const sanitizedTeamAStats = sanitizeStats(teamAStats);
+    const sanitizedTeamBStats = sanitizeStats(teamBStats);
+
     const dbMatch = dbMatches.find(m => m.id === matchId);
 
     if (dbMatch) {
       const { error } = await supabase
         .from("matches")
         .update({
-          team_a_stats: teamAStats,
-          team_b_stats: teamBStats,
+          team_a_stats: sanitizedTeamAStats,
+          team_b_stats: sanitizedTeamBStats,
           status,
         })
         .eq("id", matchId);
 
       if (error) {
+        console.error("Update match error:", error);
         toast.error("Failed to update match: " + error.message);
       } else {
         toast.success("Match updated successfully!");
@@ -142,11 +171,12 @@ function AdminPage() {
             team_b: defaultMatch.teamB,
             status,
             match_type: defaultMatch.type,
-            team_a_stats: teamAStats,
-            team_b_stats: teamBStats,
+            team_a_stats: sanitizedTeamAStats,
+            team_b_stats: sanitizedTeamBStats,
           });
 
         if (error) {
+          console.error("Insert match error:", error);
           toast.error("Failed to create match: " + error.message);
         } else {
           toast.success("Match created successfully!");
@@ -159,29 +189,41 @@ function AdminPage() {
   };
 
   const handleUpdateTeam = async (teamName: string, players: string[]) => {
+    // Sanitize players array: remove undefined, null, and empty strings
+    const sanitizedPlayers = players
+      .filter((p): p is string => p !== undefined && p !== null && p.trim() !== "")
+      .map(p => p.trim());
+
     const team = dbTeams.find(t => t.name === teamName);
 
     if (team) {
+      // Update existing team
       const { error } = await supabase
         .from("teams")
-        .update({ players })
+        .update({ players: sanitizedPlayers })
         .eq("id", team.id);
 
       if (error) {
+        console.error("Update error:", error);
         toast.error("Failed to update team: " + error.message);
       } else {
         toast.success(`${teamName} updated successfully!`);
         await refetchTeams();
       }
     } else {
+      // Insert new team using upsert to handle conflicts
       const { error } = await supabase
         .from("teams")
-        .insert({ name: teamName, players });
+        .upsert(
+          { name: teamName, players: sanitizedPlayers },
+          { onConflict: "name" }
+        );
 
       if (error) {
+        console.error("Insert error:", error);
         toast.error("Failed to create team: " + error.message);
       } else {
-        toast.success(`${teamName} created successfully!`);
+        toast.success(`${teamName} saved successfully!`);
         await refetchTeams();
       }
     }
