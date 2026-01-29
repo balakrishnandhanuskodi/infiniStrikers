@@ -43,14 +43,44 @@ interface PublicFixturesProps {
   matches: Match[];
 }
 
+// Parse date string like "9th February" to a sortable number
+const parseDateString = (dateStr: string): number => {
+  const months: Record<string, number> = {
+    january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
+    july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
+  };
+
+  // Extract day number (remove st, nd, rd, th)
+  const dayMatch = dateStr.match(/(\d+)/);
+  const day = dayMatch ? parseInt(dayMatch[1]) : 0;
+
+  // Extract month
+  const monthMatch = dateStr.toLowerCase().match(/(january|february|march|april|may|june|july|august|september|october|november|december)/);
+  const month = monthMatch ? months[monthMatch[1]] : 0;
+
+  // Return sortable number: month * 100 + day (e.g., February 9 = 209)
+  return month * 100 + day;
+};
+
 export function PublicFixtures({ matches }: PublicFixturesProps) {
-  const groupedMatches = matches.reduce((acc, match) => {
+  // Sort matches by date first
+  const sortedMatches = [...matches].sort((a, b) => {
+    const dateA = parseDateString(a.date);
+    const dateB = parseDateString(b.date);
+    if (dateA !== dateB) return dateA - dateB;
+    return a.matchNumber - b.matchNumber;
+  });
+
+  const groupedMatches = sortedMatches.reduce((acc, match) => {
     if (!acc[match.date]) {
       acc[match.date] = [];
     }
     acc[match.date].push(match);
     return acc;
   }, {} as Record<string, Match[]>);
+
+  // Sort the date keys to ensure proper order
+  const sortedDates = Object.keys(groupedMatches).sort((a, b) => parseDateString(a) - parseDateString(b));
 
   const getStrikeRate = (runs: number, balls: number) => {
     return balls > 0 ? ((runs / balls) * 100).toFixed(1) : "0.0";
@@ -69,7 +99,9 @@ export function PublicFixtures({ matches }: PublicFixturesProps) {
         </div>
 
         <div className="space-y-4">
-          {Object.entries(groupedMatches).map(([date, dayMatches]) => (
+          {sortedDates.map((date) => {
+            const dayMatches = groupedMatches[date];
+            return (
             <div key={date}>
               <div className="flex items-center gap-2 mb-3">
                 <Calendar className="w-4 h-4 text-green-300" />
@@ -278,7 +310,8 @@ export function PublicFixtures({ matches }: PublicFixturesProps) {
                 ))}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
