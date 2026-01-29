@@ -276,6 +276,8 @@ export function AdminPanel({
   const stats = selectedMatch ? getMatchStats(selectedMatch) : null;
 
   const hasNoData = matches.length === 0 && teams.length === 0;
+  // Only show loading on initial load (when no data yet), not during refetches
+  const showInitialLoader = isLoading && hasNoData;
 
   return (
     <div className="min-h-screen bg-gray-50 py-6 px-4">
@@ -308,7 +310,7 @@ export function AdminPanel({
           </div>
         </div>
 
-        {isLoading ? (
+        {showInitialLoader ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
           </div>
@@ -484,6 +486,7 @@ export function AdminPanel({
                                     />
                                   </div>
                                   <Button
+                                    type="button"
                                     size="sm"
                                     variant="ghost"
                                     className="h-8 w-8 p-0"
@@ -552,6 +555,7 @@ export function AdminPanel({
                                     />
                                   </div>
                                   <Button
+                                    type="button"
                                     size="sm"
                                     variant="ghost"
                                     className="h-8 w-8 p-0"
@@ -568,7 +572,7 @@ export function AdminPanel({
                       ))}
                     </Tabs>
 
-                    <Button onClick={() => handleSaveMatch(selectedMatch)} className="w-full" size="lg">
+                    <Button type="button" onClick={() => handleSaveMatch(selectedMatch)} className="w-full" size="lg">
                       <Save className="w-4 h-4 mr-2" />
                       Save Match Data
                     </Button>
