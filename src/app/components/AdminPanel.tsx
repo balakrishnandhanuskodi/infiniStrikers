@@ -20,6 +20,7 @@ interface AdminPanelProps {
   teams: Team[];
   onUpdateMatch: (matchId: string, teamAStats: TeamStats, teamBStats: TeamStats, status: Match["status"]) => void;
   onUpdateTeam: (teamName: string, players: string[]) => void;
+  onRenameTeam?: (oldName: string, newName: string) => void;
   onLogout: () => void;
   onSeedData?: () => void;
   onAddMatch?: (matchData: { date: string; matchNumber: number; teamA: string; teamB: string; type: string }) => void;
@@ -27,11 +28,25 @@ interface AdminPanelProps {
   isLoading?: boolean;
 }
 
+// Parse date string like "9th February" to a sortable number
+const parseDateString = (dateStr: string): number => {
+  const months: Record<string, number> = {
+    january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
+    july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
+  };
+  const dayMatch = dateStr.match(/(\d+)/);
+  const day = dayMatch ? parseInt(dayMatch[1]) : 0;
+  const monthMatch = dateStr.toLowerCase().match(/(january|february|march|april|may|june|july|august|september|october|november|december)/);
+  const month = monthMatch ? months[monthMatch[1]] : 0;
+  return month * 100 + day;
+};
+
 export function AdminPanel({
   matches,
   teams,
   onUpdateMatch,
   onUpdateTeam,
+  onRenameTeam,
   onLogout,
   onSeedData,
   onAddMatch,
@@ -41,6 +56,14 @@ export function AdminPanel({
   const [selectedMatch, setSelectedMatch] = useState<string>("");
   const [editingTeams, setEditingTeams] = useState<Record<string, string[]>>({});
   const [editingTeamNames, setEditingTeamNames] = useState<Record<string, string>>({});
+
+  // Sort matches by date (ascending)
+  const sortedMatches = [...matches].sort((a, b) => {
+    const dateA = parseDateString(a.date);
+    const dateB = parseDateString(b.date);
+    if (dateA !== dateB) return dateA - dateB;
+    return a.matchNumber - b.matchNumber;
+  });
 
   // New match form state
   const [showAddMatch, setShowAddMatch] = useState(false);
@@ -52,12 +75,37 @@ export function AdminPanel({
     type: "group",
   });
 
+  // Format cricket overs: only allow .1 to .5 (6 balls per over)
+  // After .5, it should become next whole number (e.g., 1.5 -> 2.0)
+  const formatCricketOvers = (value: number): number => {
+    const wholeOvers = Math.floor(value);
+    const decimal = value - wholeOvers;
+    const balls = Math.round(decimal * 10); // Get balls (0-9 from decimal)
+
+    if (balls >= 6) {
+      // Roll over to next over
+      return wholeOvers + 1;
+    }
+    // Keep as X.balls format (max .5)
+    return wholeOvers + (balls / 10);
+  };
+
+  // Calculate total runs including fours (each 4 = 4 runs)
+  const calculateTotalRuns = (batting: BattingStats[]): number => {
+    return batting.reduce((sum, b) => {
+      const runsFromFours = (b.fours || 0) * 4;
+      const otherRuns = (b.runs || 0);
+      const extras = (b.extras || 0);
+      return sum + runsFromFours + otherRuns + extras;
+    }, 0);
+  };
+
   // Calculate totals from individual player stats
   const calculateTotals = (stats: TeamStats): TeamStats => {
-    const totalRuns = stats.batting.reduce((sum, b) => sum + (b.runs || 0) + (b.extras || 0), 0);
+    const totalRuns = calculateTotalRuns(stats.batting);
     const totalWickets = stats.bowling.reduce((sum, b) => sum + (b.wickets || 0), 0);
-    const overs = stats.bowling.reduce((sum, b) => sum + (b.overs || 0), 0);
-    return { ...stats, totalRuns, totalWickets, overs };
+    const overs = stats.bowling.reduce((sum, b) => sum + formatCricketOvers(b.overs || 0), 0);
+    return { ...stats, totalRuns, totalWickets, overs: formatCricketOvers(overs) };
   };
 
   const getDefaultStats = (match: Match): { teamA: TeamStats; teamB: TeamStats } => {
@@ -89,10 +137,11 @@ export function AdminPanel({
         };
       });
 
-      // Calculate totals from player stats
-      const totalRuns = batting.reduce((sum, b) => sum + b.runs + b.extras, 0);
+      // Calculate totals from player stats (including fours × 4)
+      const totalRuns = batting.reduce((sum, b) => sum + (b.fours * 4) + b.runs + b.extras, 0);
       const totalWickets = bowling.reduce((sum, b) => sum + b.wickets, 0);
-      const overs = bowling.reduce((sum, b) => sum + b.overs, 0);
+      const rawOvers = bowling.reduce((sum, b) => sum + b.overs, 0);
+      const overs = formatCricketOvers(rawOvers);
 
       return { batting, bowling, totalRuns, totalWickets, overs };
     };
@@ -124,8 +173,8 @@ export function AdminPanel({
     newStats[team] = {
       ...newStats[team],
       batting,
-      // Auto-calculate total runs from batting stats (runs + extras)
-      totalRuns: batting.reduce((sum, b) => sum + (b.runs || 0) + (b.extras || 0), 0),
+      // Auto-calculate total runs: (fours × 4) + runs + extras
+      totalRuns: batting.reduce((sum, b) => sum + ((b.fours || 0) * 4) + (b.runs || 0) + (b.extras || 0), 0),
     };
     setMatchStats((prev) => ({ ...prev, [matchId]: newStats }));
   };
@@ -134,13 +183,24 @@ export function AdminPanel({
     const stats = getMatchStats(matchId);
     const newStats = { ...stats };
     const bowling = [...newStats[team].bowling];
-    bowling[playerIndex] = { ...bowling[playerIndex], [field]: field === "player" ? value : parseFloat(value) || 0 };
+
+    // Format overs value for cricket (max .5 per over)
+    let parsedValue: string | number = field === "player" ? value : parseFloat(value) || 0;
+    if (field === "overs" && typeof parsedValue === "number") {
+      parsedValue = formatCricketOvers(parsedValue);
+    }
+
+    bowling[playerIndex] = { ...bowling[playerIndex], [field]: parsedValue };
+
+    // Calculate total overs with proper cricket formatting
+    const rawTotalOvers = bowling.reduce((sum, b) => sum + (b.overs || 0), 0);
+
     newStats[team] = {
       ...newStats[team],
       bowling,
       // Auto-calculate wickets and overs from bowling stats
       totalWickets: bowling.reduce((sum, b) => sum + (b.wickets || 0), 0),
-      overs: bowling.reduce((sum, b) => sum + (b.overs || 0), 0),
+      overs: formatCricketOvers(rawTotalOvers),
     };
     setMatchStats((prev) => ({ ...prev, [matchId]: newStats }));
   };
@@ -175,10 +235,25 @@ export function AdminPanel({
     }));
   };
 
-  const handleSaveTeam = (teamName: string) => {
-    const players = editingTeams[teamName];
+  const handleSaveTeam = (originalTeamName: string) => {
+    const players = editingTeams[originalTeamName];
+    const newTeamName = editingTeamNames[originalTeamName];
+
+    // If team name changed, rename first
+    if (newTeamName && newTeamName.trim() !== originalTeamName && onRenameTeam) {
+      onRenameTeam(originalTeamName, newTeamName.trim());
+      // Clear the editing state after rename
+      setEditingTeamNames((prev) => {
+        const updated = { ...prev };
+        delete updated[originalTeamName];
+        return updated;
+      });
+    }
+
+    // Update players
     if (players) {
-      onUpdateTeam(teamName, players.filter((p) => p.trim() !== ""));
+      const teamToUpdate = newTeamName?.trim() || originalTeamName;
+      onUpdateTeam(teamToUpdate, players.filter((p) => p.trim() !== ""));
     }
   };
 
@@ -278,7 +353,7 @@ export function AdminPanel({
                         <SelectValue placeholder="Choose a match..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {matches.map((match) => (
+                        {sortedMatches.map((match) => (
                           <SelectItem key={match.id} value={match.id}>
                             {match.date} - Match {match.matchNumber}: {match.teamA} vs {match.teamB}
                           </SelectItem>
@@ -313,7 +388,7 @@ export function AdminPanel({
                     <div>
                       <Label className="text-sm mb-2 block">Match Status</Label>
                       <div className="flex gap-2">
-                        {(["scheduled", "live", "completed"] as const).map((status) => (
+                        {(["live", "completed"] as const).map((status) => (
                           <Button
                             key={status}
                             variant={(matchStatus[selectedMatch] || selectedMatchData.status) === status ? "default" : "outline"}
@@ -363,8 +438,8 @@ export function AdminPanel({
                             </h4>
                             <div className="space-y-2">
                               {stats[team].batting.map((player, idx) => (
-                                <div key={idx} className="grid grid-cols-6 gap-2 p-2 bg-white border rounded">
-                                  <div className="col-span-2">
+                                <div key={idx} className="flex gap-2 p-2 bg-white border rounded items-end">
+                                  <div className="flex-1 min-w-0">
                                     <Label className="text-xs text-gray-500">Player</Label>
                                     <Input
                                       value={player.player}
@@ -373,7 +448,7 @@ export function AdminPanel({
                                       placeholder="Player name"
                                     />
                                   </div>
-                                  <div>
+                                  <div className="w-16">
                                     <Label className="text-xs text-gray-500">Runs</Label>
                                     <Input
                                       type="number"
@@ -382,7 +457,7 @@ export function AdminPanel({
                                       className="h-8"
                                     />
                                   </div>
-                                  <div>
+                                  <div className="w-16">
                                     <Label className="text-xs text-gray-500">Balls</Label>
                                     <Input
                                       type="number"
@@ -391,7 +466,7 @@ export function AdminPanel({
                                       className="h-8"
                                     />
                                   </div>
-                                  <div>
+                                  <div className="w-14">
                                     <Label className="text-xs text-gray-500">4s</Label>
                                     <Input
                                       type="number"
@@ -400,7 +475,7 @@ export function AdminPanel({
                                       className="h-8"
                                     />
                                   </div>
-                                  <div>
+                                  <div className="w-16">
                                     <Label className="text-xs text-gray-500">Extras</Label>
                                     <Input
                                       type="number"
@@ -409,6 +484,15 @@ export function AdminPanel({
                                       className="h-8"
                                     />
                                   </div>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => handleSaveMatch(selectedMatch)}
+                                    title="Save"
+                                  >
+                                    <Save className="h-4 w-4" />
+                                  </Button>
                                 </div>
                               ))}
                             </div>
@@ -421,8 +505,8 @@ export function AdminPanel({
                             </h4>
                             <div className="space-y-2">
                               {stats[team].bowling.map((player, idx) => (
-                                <div key={idx} className="grid grid-cols-6 gap-2 p-2 bg-white border rounded">
-                                  <div className="col-span-2">
+                                <div key={idx} className="flex gap-2 p-2 bg-white border rounded items-end">
+                                  <div className="flex-1 min-w-0">
                                     <Label className="text-xs text-gray-500">Player</Label>
                                     <Input
                                       value={player.player}
@@ -431,7 +515,7 @@ export function AdminPanel({
                                       placeholder="Player name"
                                     />
                                   </div>
-                                  <div>
+                                  <div className="w-16">
                                     <Label className="text-xs text-gray-500">Overs</Label>
                                     <Input
                                       type="number"
@@ -441,7 +525,7 @@ export function AdminPanel({
                                       className="h-8"
                                     />
                                   </div>
-                                  <div>
+                                  <div className="w-16">
                                     <Label className="text-xs text-gray-500">Maidens</Label>
                                     <Input
                                       type="number"
@@ -450,7 +534,7 @@ export function AdminPanel({
                                       className="h-8"
                                     />
                                   </div>
-                                  <div>
+                                  <div className="w-14">
                                     <Label className="text-xs text-gray-500">Runs</Label>
                                     <Input
                                       type="number"
@@ -459,7 +543,7 @@ export function AdminPanel({
                                       className="h-8"
                                     />
                                   </div>
-                                  <div>
+                                  <div className="w-16">
                                     <Label className="text-xs text-gray-500">Wickets</Label>
                                     <Input
                                       type="number"
@@ -468,6 +552,15 @@ export function AdminPanel({
                                       className="h-8"
                                     />
                                   </div>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => handleSaveMatch(selectedMatch)}
+                                    title="Save"
+                                  >
+                                    <Save className="h-4 w-4" />
+                                  </Button>
                                 </div>
                               ))}
                             </div>
@@ -617,11 +710,11 @@ export function AdminPanel({
                     </div>
                   )}
 
-                  {matches.length === 0 ? (
+                  {sortedMatches.length === 0 ? (
                     <p className="text-gray-500 text-center py-4">No matches scheduled yet.</p>
                   ) : (
                     <div className="space-y-2">
-                      {matches.map((match) => (
+                      {sortedMatches.map((match) => (
                         <div key={match.id} className="flex justify-between items-center p-3 border rounded-lg">
                           <div>
                             <p className="font-medium">{match.teamA} vs {match.teamB}</p>
