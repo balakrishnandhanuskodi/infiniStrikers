@@ -16,41 +16,50 @@ interface Team {
   players: string[];
 }
 
-// Default data
-const defaultMatches: UIMatch[] = [
-  { id: "1", date: "9th February", matchNumber: 1, teamA: "Team A", teamB: "Team C", status: "scheduled", type: "group" },
-  { id: "2", date: "9th February", matchNumber: 2, teamA: "Team B", teamB: "Team C", status: "scheduled", type: "group" },
-  { id: "3", date: "9th February", matchNumber: 3, teamA: "Team A", teamB: "Team B", status: "scheduled", type: "group" },
-  { id: "4", date: "10th February", matchNumber: 1, teamA: "Team A", teamB: "Team B", status: "scheduled", type: "group" },
-  { id: "5", date: "10th February", matchNumber: 2, teamA: "Team A", teamB: "Team C", status: "scheduled", type: "group" },
-  { id: "6", date: "10th February", matchNumber: 3, teamA: "Team B", teamB: "Team C", status: "scheduled", type: "group" },
-  { id: "7", date: "11th February", matchNumber: 1, teamA: "Place 2", teamB: "Place 3", status: "scheduled", type: "semi-final" },
-  { id: "8", date: "11th February", matchNumber: 2, teamA: "Place 1", teamB: "Winner of SF", status: "scheduled", type: "final" },
+// Default data for seeding
+const defaultMatchesData = [
+  { date: "9th February", matchNumber: 1, teamA: "Team A", teamB: "Team C", type: "group" },
+  { date: "9th February", matchNumber: 2, teamA: "Team B", teamB: "Team C", type: "group" },
+  { date: "9th February", matchNumber: 3, teamA: "Team A", teamB: "Team B", type: "group" },
+  { date: "10th February", matchNumber: 1, teamA: "Team A", teamB: "Team B", type: "group" },
+  { date: "10th February", matchNumber: 2, teamA: "Team A", teamB: "Team C", type: "group" },
+  { date: "10th February", matchNumber: 3, teamA: "Team B", teamB: "Team C", type: "group" },
+  { date: "11th February", matchNumber: 1, teamA: "Place 2", teamB: "Place 3", type: "semi-final" },
+  { date: "11th February", matchNumber: 2, teamA: "Place 1", teamB: "Winner of SF", type: "final" },
 ];
 
-const defaultTeams: Team[] = [
-  { id: "1", name: "Team A", players: ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5"] },
-  { id: "2", name: "Team B", players: ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5"] },
-  { id: "3", name: "Team C", players: ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5"] },
+const defaultTeamsData = [
+  { name: "Team A", players: ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5"] },
+  { name: "Team B", players: ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5"] },
+  { name: "Team C", players: ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5"] },
 ];
 
 // Public page component
 function PublicPage() {
-  const { matches: dbMatches } = useMatches();
+  const { matches: dbMatches, loading } = useMatches();
 
-  const matches: UIMatch[] = dbMatches.length > 0
-    ? dbMatches.map(m => ({
-        id: m.id,
-        date: m.date,
-        matchNumber: m.match_number,
-        teamA: m.team_a,
-        teamB: m.team_b,
-        status: m.status,
-        type: m.match_type,
-        teamAStats: m.team_a_stats || undefined,
-        teamBStats: m.team_b_stats || undefined,
-      }))
-    : defaultMatches;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-700 flex items-center justify-center">
+        <div className="text-center text-white">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p>Loading matches...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const matches: UIMatch[] = dbMatches.map(m => ({
+    id: m.id,
+    date: m.date,
+    matchNumber: m.match_number,
+    teamA: m.team_a,
+    teamB: m.team_b,
+    status: m.status,
+    type: m.match_type,
+    teamAStats: m.team_a_stats || undefined,
+    teamBStats: m.team_b_stats || undefined,
+  }));
 
   return <PublicFixtures matches={matches} />;
 }
@@ -59,40 +68,106 @@ function PublicPage() {
 function AdminPage() {
   const { user, loading: authLoading, signOut } = useAuth();
   const [loginError, setLoginError] = useState("");
+  const [isSeeding, setIsSeeding] = useState(false);
 
-  const { matches: dbMatches, refetch: refetchMatches } = useMatches();
-  const { teams: dbTeams, refetch: refetchTeams } = useTeams();
+  const { matches: dbMatches, loading: matchesLoading, refetch: refetchMatches } = useMatches();
+  const { teams: dbTeams, loading: teamsLoading, refetch: refetchTeams } = useTeams();
 
-  // Convert database matches to UI format
-  const matches: UIMatch[] = dbMatches.length > 0
-    ? dbMatches.map(m => ({
-        id: m.id,
-        date: m.date,
-        matchNumber: m.match_number,
-        teamA: m.team_a,
-        teamB: m.team_b,
-        status: m.status,
-        type: m.match_type,
-        teamAStats: m.team_a_stats || undefined,
-        teamBStats: m.team_b_stats || undefined,
-      }))
-    : defaultMatches;
+  // Convert database data to UI format
+  const matches: UIMatch[] = dbMatches.map(m => ({
+    id: m.id,
+    date: m.date,
+    matchNumber: m.match_number,
+    teamA: m.team_a,
+    teamB: m.team_b,
+    status: m.status,
+    type: m.match_type,
+    teamAStats: m.team_a_stats || undefined,
+    teamBStats: m.team_b_stats || undefined,
+  }));
 
-  // Convert database teams to UI format
-  const teams: Team[] = dbTeams.length > 0
-    ? dbTeams.map(t => ({
-        id: t.id,
-        name: t.name,
-        players: t.players || [],
-      }))
-    : defaultTeams;
+  const teams: Team[] = dbTeams.map(t => ({
+    id: t.id,
+    name: t.name,
+    players: t.players || [],
+  }));
+
+  // Seed all default data
+  const handleSeedData = async () => {
+    setIsSeeding(true);
+    try {
+      // Seed teams first
+      for (const team of defaultTeamsData) {
+        const exists = dbTeams.find(t => t.name === team.name);
+        if (!exists) {
+          const { error } = await supabase
+            .from("teams")
+            .insert({ name: team.name, players: team.players });
+          if (error) console.error("Error seeding team:", team.name, error);
+        }
+      }
+
+      // Seed matches
+      for (const match of defaultMatchesData) {
+        const exists = dbMatches.find(
+          m => m.date === match.date && m.match_number === match.matchNumber
+        );
+        if (!exists) {
+          const { error } = await supabase
+            .from("matches")
+            .insert({
+              date: match.date,
+              match_number: match.matchNumber,
+              team_a: match.teamA,
+              team_b: match.teamB,
+              match_type: match.type,
+              status: "scheduled",
+            });
+          if (error) console.error("Error seeding match:", match, error);
+        }
+      }
+
+      await refetchTeams();
+      await refetchMatches();
+      toast.success("Data initialized successfully!");
+    } catch (error) {
+      console.error("Seed error:", error);
+      toast.error("Failed to initialize data");
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  // Add new match
+  const handleAddMatch = async (matchData: {
+    date: string;
+    matchNumber: number;
+    teamA: string;
+    teamB: string;
+    type: string;
+  }) => {
+    const { error } = await supabase
+      .from("matches")
+      .insert({
+        date: matchData.date,
+        match_number: matchData.matchNumber,
+        team_a: matchData.teamA,
+        team_b: matchData.teamB,
+        match_type: matchData.type,
+        status: "scheduled",
+      });
+
+    if (error) {
+      console.error("Add match error:", error);
+      toast.error("Failed to add match: " + error.message);
+    } else {
+      toast.success("Match added successfully!");
+      await refetchMatches();
+    }
+  };
 
   const handleLogin = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setLoginError(error.message);
     } else {
@@ -106,7 +181,7 @@ function AdminPage() {
     toast.success("Logged out successfully!");
   };
 
-  // Helper to sanitize stats objects (remove undefined values)
+  // Helper to sanitize stats objects
   const sanitizeStats = (stats: TeamStats | null | undefined): TeamStats | null => {
     if (!stats) return null;
     return {
@@ -136,60 +211,28 @@ function AdminPage() {
     teamBStats: TeamStats,
     status: UIMatch["status"]
   ) => {
-    // Sanitize stats to remove undefined values
     const sanitizedTeamAStats = sanitizeStats(teamAStats);
     const sanitizedTeamBStats = sanitizeStats(teamBStats);
 
-    const dbMatch = dbMatches.find(m => m.id === matchId);
+    const { error } = await supabase
+      .from("matches")
+      .update({
+        team_a_stats: sanitizedTeamAStats,
+        team_b_stats: sanitizedTeamBStats,
+        status,
+      })
+      .eq("id", matchId);
 
-    if (dbMatch) {
-      const { error } = await supabase
-        .from("matches")
-        .update({
-          team_a_stats: sanitizedTeamAStats,
-          team_b_stats: sanitizedTeamBStats,
-          status,
-        })
-        .eq("id", matchId);
-
-      if (error) {
-        console.error("Update match error:", error);
-        toast.error("Failed to update match: " + error.message);
-      } else {
-        toast.success("Match updated successfully!");
-        await refetchMatches();
-      }
+    if (error) {
+      console.error("Update match error:", error);
+      toast.error("Failed to update match: " + error.message);
     } else {
-      const defaultMatch = defaultMatches.find(m => m.id === matchId);
-      if (defaultMatch) {
-        const { error } = await supabase
-          .from("matches")
-          .insert({
-            match_number: defaultMatch.matchNumber,
-            date: defaultMatch.date,
-            team_a: defaultMatch.teamA,
-            team_b: defaultMatch.teamB,
-            status,
-            match_type: defaultMatch.type,
-            team_a_stats: sanitizedTeamAStats,
-            team_b_stats: sanitizedTeamBStats,
-          });
-
-        if (error) {
-          console.error("Insert match error:", error);
-          toast.error("Failed to create match: " + error.message);
-        } else {
-          toast.success("Match created successfully!");
-          await refetchMatches();
-        }
-      } else {
-        toast.error("Match not found");
-      }
+      toast.success("Match updated successfully!");
+      await refetchMatches();
     }
   };
 
   const handleUpdateTeam = async (teamName: string, players: string[]) => {
-    // Sanitize players array: remove undefined, null, and empty strings
     const sanitizedPlayers = players
       .filter((p): p is string => p !== undefined && p !== null && p.trim() !== "")
       .map(p => p.trim());
@@ -197,7 +240,6 @@ function AdminPage() {
     const team = dbTeams.find(t => t.name === teamName);
 
     if (team) {
-      // Update existing team
       const { error } = await supabase
         .from("teams")
         .update({ players: sanitizedPlayers })
@@ -211,19 +253,15 @@ function AdminPage() {
         await refetchTeams();
       }
     } else {
-      // Insert new team using upsert to handle conflicts
       const { error } = await supabase
         .from("teams")
-        .upsert(
-          { name: teamName, players: sanitizedPlayers },
-          { onConflict: "name" }
-        );
+        .insert({ name: teamName, players: sanitizedPlayers });
 
       if (error) {
         console.error("Insert error:", error);
         toast.error("Failed to create team: " + error.message);
       } else {
-        toast.success(`${teamName} saved successfully!`);
+        toast.success(`${teamName} created successfully!`);
         await refetchTeams();
       }
     }
@@ -244,6 +282,8 @@ function AdminPage() {
     return <AdminLogin onLogin={handleLogin} error={loginError} />;
   }
 
+  const isLoading = matchesLoading || teamsLoading;
+
   return (
     <AdminPanel
       matches={matches}
@@ -251,6 +291,10 @@ function AdminPage() {
       onUpdateMatch={handleUpdateMatch}
       onUpdateTeam={handleUpdateTeam}
       onLogout={handleLogout}
+      onSeedData={handleSeedData}
+      onAddMatch={handleAddMatch}
+      isSeeding={isSeeding}
+      isLoading={isLoading}
     />
   );
 }
