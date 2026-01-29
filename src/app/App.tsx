@@ -92,38 +92,82 @@ function App() {
     teamBStats: TeamStats,
     status: UIMatch["status"]
   ) => {
-    const { error } = await supabase
-      .from("matches")
-      .update({
-        team_a_stats: teamAStats,
-        team_b_stats: teamBStats,
-        status,
-      })
-      .eq("id", matchId);
+    const dbMatch = dbMatches.find(m => m.id === matchId);
 
-    if (error) {
-      toast.error("Failed to update match: " + error.message);
+    if (dbMatch) {
+      // Update existing match
+      const { error } = await supabase
+        .from("matches")
+        .update({
+          team_a_stats: teamAStats,
+          team_b_stats: teamBStats,
+          status,
+        })
+        .eq("id", matchId);
+
+      if (error) {
+        toast.error("Failed to update match: " + error.message);
+      } else {
+        toast.success("Match updated successfully!");
+        await refetchMatches();
+      }
     } else {
-      await refetchMatches();
+      // Match not in database - find from defaults and create it
+      const defaultMatch = defaultMatches.find(m => m.id === matchId);
+      if (defaultMatch) {
+        const { error } = await supabase
+          .from("matches")
+          .insert({
+            match_number: defaultMatch.matchNumber,
+            date: defaultMatch.date,
+            team_a: defaultMatch.teamA,
+            team_b: defaultMatch.teamB,
+            status,
+            match_type: defaultMatch.type,
+            team_a_stats: teamAStats,
+            team_b_stats: teamBStats,
+          });
+
+        if (error) {
+          toast.error("Failed to create match: " + error.message);
+        } else {
+          toast.success("Match created successfully!");
+          await refetchMatches();
+        }
+      } else {
+        toast.error("Match not found");
+      }
     }
   };
 
   const handleUpdateTeam = async (teamName: string, players: string[]) => {
     const team = dbTeams.find(t => t.name === teamName);
-    if (!team) {
-      toast.error("Team not found");
-      return;
-    }
 
-    const { error } = await supabase
-      .from("teams")
-      .update({ players })
-      .eq("id", team.id);
+    if (team) {
+      // Update existing team
+      const { error } = await supabase
+        .from("teams")
+        .update({ players })
+        .eq("id", team.id);
 
-    if (error) {
-      toast.error("Failed to update team: " + error.message);
+      if (error) {
+        toast.error("Failed to update team: " + error.message);
+      } else {
+        toast.success(`${teamName} updated successfully!`);
+        await refetchTeams();
+      }
     } else {
-      await refetchTeams();
+      // Create new team if it doesn't exist in database
+      const { error } = await supabase
+        .from("teams")
+        .insert({ name: teamName, players });
+
+      if (error) {
+        toast.error("Failed to create team: " + error.message);
+      } else {
+        toast.success(`${teamName} created successfully!`);
+        await refetchTeams();
+      }
     }
   };
 
