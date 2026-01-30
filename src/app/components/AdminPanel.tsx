@@ -441,22 +441,22 @@ export function AdminPanel({
                         return (
                         <TabsContent key={battingTeam} value={battingTeam} className="space-y-4">
                           {/* Team Totals - Auto-calculated */}
-                          <div className={`grid grid-cols-3 gap-3 p-3 rounded-lg ${battingTeam === "teamA" ? "bg-blue-100 border-2 border-blue-300" : "bg-orange-100 border-2 border-orange-300"}`}>
+                          <div className={`grid grid-cols-3 gap-2 sm:gap-3 p-3 rounded-lg ${battingTeam === "teamA" ? "bg-blue-100 border-2 border-blue-300" : "bg-orange-100 border-2 border-orange-300"}`}>
                             <div>
-                              <Label className="text-xs">Total Runs (auto)</Label>
-                              <div className="h-9 flex items-center px-3 bg-white border rounded-md font-semibold text-lg">
+                              <Label className="text-xs whitespace-nowrap">Total Runs</Label>
+                              <div className="h-9 flex items-center justify-center px-2 sm:px-3 bg-white border rounded-md font-semibold text-lg">
                                 {totalRuns}
                               </div>
                             </div>
                             <div>
-                              <Label className="text-xs">Wickets Lost (auto)</Label>
-                              <div className="h-9 flex items-center px-3 bg-white border rounded-md font-semibold text-lg">
+                              <Label className="text-xs whitespace-nowrap">Wickets</Label>
+                              <div className="h-9 flex items-center justify-center px-2 sm:px-3 bg-white border rounded-md font-semibold text-lg">
                                 {wicketsLost}
                               </div>
                             </div>
                             <div>
-                              <Label className="text-xs">Overs (auto)</Label>
-                              <div className="h-9 flex items-center px-3 bg-white border rounded-md font-semibold text-lg">
+                              <Label className="text-xs whitespace-nowrap">Overs</Label>
+                              <div className="h-9 flex items-center justify-center px-2 sm:px-3 bg-white border rounded-md font-semibold text-lg">
                                 {oversFaced}
                               </div>
                             </div>
@@ -469,8 +469,9 @@ export function AdminPanel({
                             </h4>
                             <div className="space-y-2">
                               {battingStats.map((player, idx) => (
-                                <div key={idx} className="flex gap-2 p-2 bg-white border rounded items-end">
-                                  <div className="flex-1 min-w-0">
+                                <div key={idx} className="p-2 bg-white border rounded">
+                                  {/* Player name row - full width on mobile */}
+                                  <div className="mb-2 sm:hidden">
                                     <Label className="text-xs text-gray-500">Player</Label>
                                     <Input
                                       value={player.player}
@@ -479,72 +480,85 @@ export function AdminPanel({
                                       placeholder="Player name"
                                     />
                                   </div>
-                                  <div className="w-12">
-                                    <Label className="text-xs text-gray-500">1s</Label>
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      value={player.ones || 0}
-                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "ones", e.target.value)}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  <div className="w-12">
-                                    <Label className="text-xs text-gray-500">2s</Label>
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      value={player.twos || 0}
-                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "twos", e.target.value)}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  <div className="w-12">
-                                    <Label className="text-xs text-gray-500">4s</Label>
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      value={player.fours || 0}
-                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "fours", e.target.value)}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  <div className="w-12">
-                                    <Label className="text-xs text-gray-500">Ext</Label>
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      value={player.extras || 0}
-                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "extras", e.target.value)}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  <div className="w-12">
-                                    <Label className="text-xs text-gray-500">Balls</Label>
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      value={player.balls || 0}
-                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "balls", e.target.value)}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  <div className="w-14">
-                                    <Label className="text-xs text-gray-500">Runs</Label>
-                                    <div className="h-8 flex items-center justify-center bg-gray-100 border rounded-md font-semibold text-sm">
-                                      {player.runs || 0}
+                                  {/* Stats row */}
+                                  <div className="flex gap-1 sm:gap-2 items-end">
+                                    {/* Player name - hidden on mobile, shown on desktop */}
+                                    <div className="hidden sm:block w-36 md:w-48 lg:w-56 shrink-0">
+                                      <Label className="text-xs text-gray-500">Player</Label>
+                                      <Input
+                                        value={player.player}
+                                        onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "player", e.target.value)}
+                                        className="h-8 text-sm"
+                                        placeholder="Player name"
+                                      />
                                     </div>
+                                    <div className="w-10 sm:w-14 shrink-0">
+                                      <Label className="text-xs text-gray-500">1s</Label>
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        value={player.ones || 0}
+                                        onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "ones", e.target.value)}
+                                        className="h-8 px-1 sm:px-2 text-center"
+                                      />
+                                    </div>
+                                    <div className="w-10 sm:w-14 shrink-0">
+                                      <Label className="text-xs text-gray-500">2s</Label>
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        value={player.twos || 0}
+                                        onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "twos", e.target.value)}
+                                        className="h-8 px-1 sm:px-2 text-center"
+                                      />
+                                    </div>
+                                    <div className="w-10 sm:w-14 shrink-0">
+                                      <Label className="text-xs text-gray-500">4s</Label>
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        value={player.fours || 0}
+                                        onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "fours", e.target.value)}
+                                        className="h-8 px-1 sm:px-2 text-center"
+                                      />
+                                    </div>
+                                    <div className="w-10 sm:w-14 shrink-0">
+                                      <Label className="text-xs text-gray-500">Ext</Label>
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        value={player.extras || 0}
+                                        onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "extras", e.target.value)}
+                                        className="h-8 px-1 sm:px-2 text-center"
+                                      />
+                                    </div>
+                                    <div className="w-10 sm:w-14 shrink-0">
+                                      <Label className="text-xs text-gray-500">Balls</Label>
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        value={player.balls || 0}
+                                        onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "balls", e.target.value)}
+                                        className="h-8 px-1 sm:px-2 text-center"
+                                      />
+                                    </div>
+                                    <div className="w-10 sm:w-14 shrink-0">
+                                      <Label className="text-xs text-gray-500">Runs</Label>
+                                      <div className="h-8 flex items-center justify-center bg-gray-100 border rounded-md font-semibold text-sm">
+                                        {player.runs || 0}
+                                      </div>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 w-8 p-0 shrink-0"
+                                      onClick={() => handleSaveMatch(selectedMatch)}
+                                      title="Save"
+                                    >
+                                      <Save className="h-4 w-4" />
+                                    </Button>
                                   </div>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-8 w-8 p-0"
-                                    onClick={() => handleSaveMatch(selectedMatch)}
-                                    title="Save"
-                                  >
-                                    <Save className="h-4 w-4" />
-                                  </Button>
                                 </div>
                               ))}
                             </div>
@@ -557,8 +571,9 @@ export function AdminPanel({
                             </h4>
                             <div className="space-y-2">
                               {bowlingStats.map((player, idx) => (
-                                <div key={idx} className="flex gap-2 p-2 bg-white border rounded items-end">
-                                  <div className="flex-1 min-w-0">
+                                <div key={idx} className="p-2 bg-white border rounded">
+                                  {/* Player name row - full width on mobile */}
+                                  <div className="mb-2 sm:hidden">
                                     <Label className="text-xs text-gray-500">Player</Label>
                                     <Input
                                       value={player.player}
@@ -567,53 +582,66 @@ export function AdminPanel({
                                       placeholder="Player name"
                                     />
                                   </div>
-                                  <div className="w-16">
-                                    <Label className="text-xs text-gray-500">Overs</Label>
-                                    <Input
-                                      type="number"
-                                      step="0.1"
-                                      value={player.overs}
-                                      onChange={(e) => updateBowlingStats(selectedMatch, bowlingTeam, idx, "overs", e.target.value)}
-                                      className="h-8"
-                                    />
+                                  {/* Stats row */}
+                                  <div className="flex gap-1 sm:gap-2 items-end">
+                                    {/* Player name - hidden on mobile, shown on desktop */}
+                                    <div className="hidden sm:block w-36 md:w-48 lg:w-56 shrink-0">
+                                      <Label className="text-xs text-gray-500">Player</Label>
+                                      <Input
+                                        value={player.player}
+                                        onChange={(e) => updateBowlingStats(selectedMatch, bowlingTeam, idx, "player", e.target.value)}
+                                        className="h-8 text-sm"
+                                        placeholder="Player name"
+                                      />
+                                    </div>
+                                    <div className="w-12 sm:w-16 shrink-0">
+                                      <Label className="text-xs text-gray-500">Overs</Label>
+                                      <Input
+                                        type="number"
+                                        step="0.1"
+                                        value={player.overs}
+                                        onChange={(e) => updateBowlingStats(selectedMatch, bowlingTeam, idx, "overs", e.target.value)}
+                                        className="h-8 px-1 sm:px-2 text-center"
+                                      />
+                                    </div>
+                                    <div className="w-10 sm:w-16 shrink-0">
+                                      <Label className="text-xs text-gray-500">Mdns</Label>
+                                      <Input
+                                        type="number"
+                                        value={player.maidens}
+                                        onChange={(e) => updateBowlingStats(selectedMatch, bowlingTeam, idx, "maidens", e.target.value)}
+                                        className="h-8 px-1 sm:px-2 text-center"
+                                      />
+                                    </div>
+                                    <div className="w-10 sm:w-14 shrink-0">
+                                      <Label className="text-xs text-gray-500">Runs</Label>
+                                      <Input
+                                        type="number"
+                                        value={player.runs}
+                                        onChange={(e) => updateBowlingStats(selectedMatch, bowlingTeam, idx, "runs", e.target.value)}
+                                        className="h-8 px-1 sm:px-2 text-center"
+                                      />
+                                    </div>
+                                    <div className="w-10 sm:w-16 shrink-0">
+                                      <Label className="text-xs text-gray-500">Wkts</Label>
+                                      <Input
+                                        type="number"
+                                        value={player.wickets}
+                                        onChange={(e) => updateBowlingStats(selectedMatch, bowlingTeam, idx, "wickets", e.target.value)}
+                                        className="h-8 px-1 sm:px-2 text-center"
+                                      />
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 w-8 p-0 shrink-0"
+                                      onClick={() => handleSaveMatch(selectedMatch)}
+                                      title="Save"
+                                    >
+                                      <Save className="h-4 w-4" />
+                                    </Button>
                                   </div>
-                                  <div className="w-16">
-                                    <Label className="text-xs text-gray-500">Maidens</Label>
-                                    <Input
-                                      type="number"
-                                      value={player.maidens}
-                                      onChange={(e) => updateBowlingStats(selectedMatch, bowlingTeam, idx, "maidens", e.target.value)}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  <div className="w-14">
-                                    <Label className="text-xs text-gray-500">Runs</Label>
-                                    <Input
-                                      type="number"
-                                      value={player.runs}
-                                      onChange={(e) => updateBowlingStats(selectedMatch, bowlingTeam, idx, "runs", e.target.value)}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  <div className="w-16">
-                                    <Label className="text-xs text-gray-500">Wickets</Label>
-                                    <Input
-                                      type="number"
-                                      value={player.wickets}
-                                      onChange={(e) => updateBowlingStats(selectedMatch, bowlingTeam, idx, "wickets", e.target.value)}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-8 w-8 p-0"
-                                    onClick={() => handleSaveMatch(selectedMatch)}
-                                    title="Save"
-                                  >
-                                    <Save className="h-4 w-4" />
-                                  </Button>
                                 </div>
                               ))}
                             </div>
