@@ -5,10 +5,12 @@ import { Calendar, Clock, TrendingUp } from "lucide-react";
 
 export interface BattingStats {
   player: string;
-  runs: number;
-  balls: number;
-  fours: number;
+  ones: number;   // singles
+  twos: number;   // doubles
+  fours: number;  // boundaries
   extras: number; // runs due to no-ball/wide
+  balls: number;
+  runs: number;   // auto-calculated: (ones × 1) + (twos × 2) + (fours × 4) + extras
 }
 
 export interface BowlingStats {
@@ -179,10 +181,12 @@ export function PublicFixtures({ matches }: PublicFixturesProps) {
                                     <thead className="bg-slate-800">
                                       <tr className="text-gray-400">
                                         <th className="text-left py-1 px-2">Player</th>
-                                        <th className="text-center py-1 px-1">R</th>
-                                        <th className="text-center py-1 px-1">B</th>
+                                        <th className="text-center py-1 px-1">1s</th>
+                                        <th className="text-center py-1 px-1">2s</th>
                                         <th className="text-center py-1 px-1">4s</th>
-                                        <th className="text-center py-1 px-1">Extras</th>
+                                        <th className="text-center py-1 px-1">Ext</th>
+                                        <th className="text-center py-1 px-1">B</th>
+                                        <th className="text-center py-1 px-1">R</th>
                                         <th className="text-center py-1 px-1">SR</th>
                                       </tr>
                                     </thead>
@@ -190,10 +194,12 @@ export function PublicFixtures({ matches }: PublicFixturesProps) {
                                       {match.teamAStats?.batting.map((player, idx) => (
                                         <tr key={idx} className="border-t border-slate-700">
                                           <td className="py-1 px-2 text-white">{player.player}</td>
-                                          <td className="text-center py-1 px-1">{player.runs}</td>
-                                          <td className="text-center py-1 px-1">{player.balls}</td>
-                                          <td className="text-center py-1 px-1">{player.fours}</td>
-                                          <td className="text-center py-1 px-1">{player.extras}</td>
+                                          <td className="text-center py-1 px-1">{player.ones || 0}</td>
+                                          <td className="text-center py-1 px-1">{player.twos || 0}</td>
+                                          <td className="text-center py-1 px-1">{player.fours || 0}</td>
+                                          <td className="text-center py-1 px-1">{player.extras || 0}</td>
+                                          <td className="text-center py-1 px-1">{player.balls || 0}</td>
+                                          <td className="text-center py-1 px-1 font-semibold">{player.runs || 0}</td>
                                           <td className="text-center py-1 px-1">{getStrikeRate(player.runs, player.balls)}</td>
                                         </tr>
                                       ))}
@@ -248,10 +254,12 @@ export function PublicFixtures({ matches }: PublicFixturesProps) {
                                     <thead className="bg-slate-800">
                                       <tr className="text-gray-400">
                                         <th className="text-left py-1 px-2">Player</th>
-                                        <th className="text-center py-1 px-1">R</th>
-                                        <th className="text-center py-1 px-1">B</th>
+                                        <th className="text-center py-1 px-1">1s</th>
+                                        <th className="text-center py-1 px-1">2s</th>
                                         <th className="text-center py-1 px-1">4s</th>
-                                        <th className="text-center py-1 px-1">Extras</th>
+                                        <th className="text-center py-1 px-1">Ext</th>
+                                        <th className="text-center py-1 px-1">B</th>
+                                        <th className="text-center py-1 px-1">R</th>
                                         <th className="text-center py-1 px-1">SR</th>
                                       </tr>
                                     </thead>
@@ -259,10 +267,12 @@ export function PublicFixtures({ matches }: PublicFixturesProps) {
                                       {match.teamBStats?.batting.map((player, idx) => (
                                         <tr key={idx} className="border-t border-slate-700">
                                           <td className="py-1 px-2 text-white">{player.player}</td>
-                                          <td className="text-center py-1 px-1">{player.runs}</td>
-                                          <td className="text-center py-1 px-1">{player.balls}</td>
-                                          <td className="text-center py-1 px-1">{player.fours}</td>
-                                          <td className="text-center py-1 px-1">{player.extras}</td>
+                                          <td className="text-center py-1 px-1">{player.ones || 0}</td>
+                                          <td className="text-center py-1 px-1">{player.twos || 0}</td>
+                                          <td className="text-center py-1 px-1">{player.fours || 0}</td>
+                                          <td className="text-center py-1 px-1">{player.extras || 0}</td>
+                                          <td className="text-center py-1 px-1">{player.balls || 0}</td>
+                                          <td className="text-center py-1 px-1 font-semibold">{player.runs || 0}</td>
                                           <td className="text-center py-1 px-1">{getStrikeRate(player.runs, player.balls)}</td>
                                         </tr>
                                       ))}
