@@ -404,47 +404,62 @@ export function AdminPanel({
 
                     <Tabs defaultValue="teamA">
                       <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="teamA">{selectedMatchData.teamA}</TabsTrigger>
-                        <TabsTrigger value="teamB">{selectedMatchData.teamB}</TabsTrigger>
+                        <TabsTrigger value="teamA">{selectedMatchData.teamA} (Batting)</TabsTrigger>
+                        <TabsTrigger value="teamB">{selectedMatchData.teamB} (Batting)</TabsTrigger>
                       </TabsList>
 
-                      {(["teamA", "teamB"] as const).map((team) => (
-                        <TabsContent key={team} value={team} className="space-y-4">
+                      {(["teamA", "teamB"] as const).map((battingTeam) => {
+                        // When Team A is batting, Team B is bowling (and vice versa)
+                        const bowlingTeam = battingTeam === "teamA" ? "teamB" : "teamA";
+                        const battingTeamName = battingTeam === "teamA" ? selectedMatchData.teamA : selectedMatchData.teamB;
+                        const bowlingTeamName = bowlingTeam === "teamA" ? selectedMatchData.teamA : selectedMatchData.teamB;
+
+                        // Batting stats from batting team, bowling stats from bowling team
+                        const battingStats = stats[battingTeam].batting;
+                        const bowlingStats = stats[bowlingTeam].bowling;
+
+                        // Total runs from batting team, wickets/overs from bowling team (against this batting team)
+                        const totalRuns = stats[battingTeam].totalRuns;
+                        const wicketsLost = bowlingStats.reduce((sum, b) => sum + (b.wickets || 0), 0);
+                        const oversFaced = formatCricketOvers(bowlingStats.reduce((sum, b) => sum + (b.overs || 0), 0));
+
+                        return (
+                        <TabsContent key={battingTeam} value={battingTeam} className="space-y-4">
                           {/* Team Totals - Auto-calculated */}
-                          <div className={`grid grid-cols-3 gap-3 p-3 rounded-lg ${team === "teamA" ? "bg-blue-100 border-2 border-blue-300" : "bg-orange-100 border-2 border-orange-300"}`}>
+                          <div className={`grid grid-cols-3 gap-3 p-3 rounded-lg ${battingTeam === "teamA" ? "bg-blue-100 border-2 border-blue-300" : "bg-orange-100 border-2 border-orange-300"}`}>
                             <div>
                               <Label className="text-xs">Total Runs (auto)</Label>
                               <div className="h-9 flex items-center px-3 bg-white border rounded-md font-semibold text-lg">
-                                {stats[team].totalRuns}
+                                {totalRuns}
                               </div>
                             </div>
                             <div>
-                              <Label className="text-xs">Wickets (auto)</Label>
+                              <Label className="text-xs">Wickets Lost (auto)</Label>
                               <div className="h-9 flex items-center px-3 bg-white border rounded-md font-semibold text-lg">
-                                {stats[team].totalWickets}
+                                {wicketsLost}
                               </div>
                             </div>
                             <div>
                               <Label className="text-xs">Overs (auto)</Label>
                               <div className="h-9 flex items-center px-3 bg-white border rounded-md font-semibold text-lg">
-                                {stats[team].overs}
+                                {oversFaced}
                               </div>
                             </div>
                           </div>
 
-                          {/* Batting Stats */}
-                          <div className={`p-3 rounded-lg ${team === "teamA" ? "bg-blue-50" : "bg-orange-50"}`}>
-                            <h4 className={`text-sm font-semibold mb-2 flex items-center gap-1 ${team === "teamA" ? "text-blue-700" : "text-orange-700"}`}>
-                              <TrendingUp className="w-4 h-4" /> Batting Details
+                          {/* Batting Stats - from batting team */}
+                          <div className={`p-3 rounded-lg ${battingTeam === "teamA" ? "bg-blue-50" : "bg-orange-50"}`}>
+                            <h4 className={`text-sm font-semibold mb-2 flex items-center gap-1 ${battingTeam === "teamA" ? "text-blue-700" : "text-orange-700"}`}>
+                              <TrendingUp className="w-4 h-4" /> {battingTeamName} Batting
                             </h4>
                             <div className="space-y-2">
-                              {stats[team].batting.map((player, idx) => (
+                              {battingStats.map((player, idx) => (
                                 <div key={idx} className="flex gap-2 p-2 bg-white border rounded items-end">
                                   <div className="flex-1 min-w-0">
                                     <Label className="text-xs text-gray-500">Player</Label>
                                     <Input
                                       value={player.player}
-                                      onChange={(e) => updateBattingStats(selectedMatch, team, idx, "player", e.target.value)}
+                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "player", e.target.value)}
                                       className="h-8 text-sm"
                                       placeholder="Player name"
                                     />
@@ -454,7 +469,7 @@ export function AdminPanel({
                                     <Input
                                       type="number"
                                       value={player.runs}
-                                      onChange={(e) => updateBattingStats(selectedMatch, team, idx, "runs", e.target.value)}
+                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "runs", e.target.value)}
                                       className="h-8"
                                     />
                                   </div>
@@ -463,7 +478,7 @@ export function AdminPanel({
                                     <Input
                                       type="number"
                                       value={player.balls}
-                                      onChange={(e) => updateBattingStats(selectedMatch, team, idx, "balls", e.target.value)}
+                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "balls", e.target.value)}
                                       className="h-8"
                                     />
                                   </div>
@@ -472,7 +487,7 @@ export function AdminPanel({
                                     <Input
                                       type="number"
                                       value={player.fours}
-                                      onChange={(e) => updateBattingStats(selectedMatch, team, idx, "fours", e.target.value)}
+                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "fours", e.target.value)}
                                       className="h-8"
                                     />
                                   </div>
@@ -481,7 +496,7 @@ export function AdminPanel({
                                     <Input
                                       type="number"
                                       value={player.extras}
-                                      onChange={(e) => updateBattingStats(selectedMatch, team, idx, "extras", e.target.value)}
+                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "extras", e.target.value)}
                                       className="h-8"
                                     />
                                   </div>
@@ -500,19 +515,19 @@ export function AdminPanel({
                             </div>
                           </div>
 
-                          {/* Bowling Stats */}
-                          <div className={`p-3 rounded-lg ${team === "teamA" ? "bg-blue-50" : "bg-orange-50"}`}>
-                            <h4 className={`text-sm font-semibold mb-2 flex items-center gap-1 ${team === "teamA" ? "text-blue-700" : "text-orange-700"}`}>
-                              <TrendingUp className="w-4 h-4" /> Bowling Details
+                          {/* Bowling Stats - from bowling team (opposite team) */}
+                          <div className={`p-3 rounded-lg ${bowlingTeam === "teamA" ? "bg-blue-50" : "bg-orange-50"}`}>
+                            <h4 className={`text-sm font-semibold mb-2 flex items-center gap-1 ${bowlingTeam === "teamA" ? "text-blue-700" : "text-orange-700"}`}>
+                              <TrendingUp className="w-4 h-4" /> {bowlingTeamName} Bowling
                             </h4>
                             <div className="space-y-2">
-                              {stats[team].bowling.map((player, idx) => (
+                              {bowlingStats.map((player, idx) => (
                                 <div key={idx} className="flex gap-2 p-2 bg-white border rounded items-end">
                                   <div className="flex-1 min-w-0">
                                     <Label className="text-xs text-gray-500">Player</Label>
                                     <Input
                                       value={player.player}
-                                      onChange={(e) => updateBowlingStats(selectedMatch, team, idx, "player", e.target.value)}
+                                      onChange={(e) => updateBowlingStats(selectedMatch, bowlingTeam, idx, "player", e.target.value)}
                                       className="h-8 text-sm"
                                       placeholder="Player name"
                                     />
@@ -523,7 +538,7 @@ export function AdminPanel({
                                       type="number"
                                       step="0.1"
                                       value={player.overs}
-                                      onChange={(e) => updateBowlingStats(selectedMatch, team, idx, "overs", e.target.value)}
+                                      onChange={(e) => updateBowlingStats(selectedMatch, bowlingTeam, idx, "overs", e.target.value)}
                                       className="h-8"
                                     />
                                   </div>
@@ -532,7 +547,7 @@ export function AdminPanel({
                                     <Input
                                       type="number"
                                       value={player.maidens}
-                                      onChange={(e) => updateBowlingStats(selectedMatch, team, idx, "maidens", e.target.value)}
+                                      onChange={(e) => updateBowlingStats(selectedMatch, bowlingTeam, idx, "maidens", e.target.value)}
                                       className="h-8"
                                     />
                                   </div>
@@ -541,7 +556,7 @@ export function AdminPanel({
                                     <Input
                                       type="number"
                                       value={player.runs}
-                                      onChange={(e) => updateBowlingStats(selectedMatch, team, idx, "runs", e.target.value)}
+                                      onChange={(e) => updateBowlingStats(selectedMatch, bowlingTeam, idx, "runs", e.target.value)}
                                       className="h-8"
                                     />
                                   </div>
@@ -550,7 +565,7 @@ export function AdminPanel({
                                     <Input
                                       type="number"
                                       value={player.wickets}
-                                      onChange={(e) => updateBowlingStats(selectedMatch, team, idx, "wickets", e.target.value)}
+                                      onChange={(e) => updateBowlingStats(selectedMatch, bowlingTeam, idx, "wickets", e.target.value)}
                                       className="h-8"
                                     />
                                   </div>
@@ -569,7 +584,8 @@ export function AdminPanel({
                             </div>
                           </div>
                         </TabsContent>
-                      ))}
+                        );
+                      })}
                     </Tabs>
 
                     <Button type="button" onClick={() => handleSaveMatch(selectedMatch)} className="w-full" size="lg">
