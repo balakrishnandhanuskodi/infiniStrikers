@@ -142,32 +142,33 @@ export function PublicFixtures({ matches }: PublicFixturesProps) {
                         </div>
                       ) : (
                         <div className="space-y-4">
-                          {/* Score Summary */}
+                          {/* Score Summary - wickets lost come from opposing team's bowling */}
                           <div className="grid grid-cols-2 gap-3">
                             <div className="bg-slate-800/50 rounded-lg p-3">
                               <p className="text-sm font-semibold text-gray-300 mb-1">{match.teamA}</p>
                               <p className="text-2xl font-bold text-white">
-                                {match.teamAStats?.totalRuns || 0}/{match.teamAStats?.totalWickets || 0}
+                                {match.teamAStats?.totalRuns || 0}/{match.teamBStats?.bowling?.reduce((sum, b) => sum + (b.wickets || 0), 0) || 0}
                               </p>
-                              <p className="text-xs text-gray-400">({match.teamAStats?.overs || 0} overs)</p>
+                              <p className="text-xs text-gray-400">({match.teamBStats?.bowling?.reduce((sum, b) => sum + (b.overs || 0), 0) || 0} overs)</p>
                             </div>
                             <div className="bg-slate-800/50 rounded-lg p-3">
                               <p className="text-sm font-semibold text-gray-300 mb-1">{match.teamB}</p>
                               <p className="text-2xl font-bold text-white">
-                                {match.teamBStats?.totalRuns || 0}/{match.teamBStats?.totalWickets || 0}
+                                {match.teamBStats?.totalRuns || 0}/{match.teamAStats?.bowling?.reduce((sum, b) => sum + (b.wickets || 0), 0) || 0}
                               </p>
-                              <p className="text-xs text-gray-400">({match.teamBStats?.overs || 0} overs)</p>
+                              <p className="text-xs text-gray-400">({match.teamAStats?.bowling?.reduce((sum, b) => sum + (b.overs || 0), 0) || 0} overs)</p>
                             </div>
                           </div>
 
-                          {/* Detailed Stats */}
-                          <Tabs defaultValue="batting" className="w-full">
+                          {/* Detailed Stats - Team-based tabs */}
+                          <Tabs defaultValue="teamA" className="w-full">
                             <TabsList className="grid w-full grid-cols-2 bg-slate-800">
-                              <TabsTrigger value="batting">Batting</TabsTrigger>
-                              <TabsTrigger value="bowling">Bowling</TabsTrigger>
+                              <TabsTrigger value="teamA">{match.teamA}</TabsTrigger>
+                              <TabsTrigger value="teamB">{match.teamB}</TabsTrigger>
                             </TabsList>
 
-                            <TabsContent value="batting" className="space-y-3 mt-3">
+                            {/* Team A Batting View - Team A bats, Team B bowls */}
+                            <TabsContent value="teamA" className="space-y-3 mt-3">
                               {/* Team A Batting */}
                               <div>
                                 <h4 className="text-xs font-semibold text-green-400 mb-2 flex items-center gap-1">
@@ -201,6 +202,42 @@ export function PublicFixtures({ matches }: PublicFixturesProps) {
                                 </div>
                               </div>
 
+                              {/* Team B Bowling (against Team A) */}
+                              <div>
+                                <h4 className="text-xs font-semibold text-blue-400 mb-2 flex items-center gap-1">
+                                  <TrendingUp className="w-3 h-3" /> {match.teamB} Bowling
+                                </h4>
+                                <div className="bg-slate-800/30 rounded overflow-hidden">
+                                  <table className="w-full text-xs">
+                                    <thead className="bg-slate-800">
+                                      <tr className="text-gray-400">
+                                        <th className="text-left py-1 px-2">Player</th>
+                                        <th className="text-center py-1 px-1">O</th>
+                                        <th className="text-center py-1 px-1">M</th>
+                                        <th className="text-center py-1 px-1">R</th>
+                                        <th className="text-center py-1 px-1">W</th>
+                                        <th className="text-center py-1 px-1">Eco</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="text-gray-300">
+                                      {match.teamBStats?.bowling.map((player, idx) => (
+                                        <tr key={idx} className="border-t border-slate-700">
+                                          <td className="py-1 px-2 text-white">{player.player}</td>
+                                          <td className="text-center py-1 px-1">{player.overs}</td>
+                                          <td className="text-center py-1 px-1">{player.maidens}</td>
+                                          <td className="text-center py-1 px-1">{player.runs}</td>
+                                          <td className="text-center py-1 px-1">{player.wickets}</td>
+                                          <td className="text-center py-1 px-1">{getEconomy(player.runs, player.overs)}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </TabsContent>
+
+                            {/* Team B Batting View - Team B bats, Team A bowls */}
+                            <TabsContent value="teamB" className="space-y-3 mt-3">
                               {/* Team B Batting */}
                               <div>
                                 <h4 className="text-xs font-semibold text-green-400 mb-2 flex items-center gap-1">
@@ -233,10 +270,8 @@ export function PublicFixtures({ matches }: PublicFixturesProps) {
                                   </table>
                                 </div>
                               </div>
-                            </TabsContent>
 
-                            <TabsContent value="bowling" className="space-y-3 mt-3">
-                              {/* Team A Bowling */}
+                              {/* Team A Bowling (against Team B) */}
                               <div>
                                 <h4 className="text-xs font-semibold text-blue-400 mb-2 flex items-center gap-1">
                                   <TrendingUp className="w-3 h-3" /> {match.teamA} Bowling
@@ -255,39 +290,6 @@ export function PublicFixtures({ matches }: PublicFixturesProps) {
                                     </thead>
                                     <tbody className="text-gray-300">
                                       {match.teamAStats?.bowling.map((player, idx) => (
-                                        <tr key={idx} className="border-t border-slate-700">
-                                          <td className="py-1 px-2 text-white">{player.player}</td>
-                                          <td className="text-center py-1 px-1">{player.overs}</td>
-                                          <td className="text-center py-1 px-1">{player.maidens}</td>
-                                          <td className="text-center py-1 px-1">{player.runs}</td>
-                                          <td className="text-center py-1 px-1">{player.wickets}</td>
-                                          <td className="text-center py-1 px-1">{getEconomy(player.runs, player.overs)}</td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-
-                              {/* Team B Bowling */}
-                              <div>
-                                <h4 className="text-xs font-semibold text-blue-400 mb-2 flex items-center gap-1">
-                                  <TrendingUp className="w-3 h-3" /> {match.teamB} Bowling
-                                </h4>
-                                <div className="bg-slate-800/30 rounded overflow-hidden">
-                                  <table className="w-full text-xs">
-                                    <thead className="bg-slate-800">
-                                      <tr className="text-gray-400">
-                                        <th className="text-left py-1 px-2">Player</th>
-                                        <th className="text-center py-1 px-1">O</th>
-                                        <th className="text-center py-1 px-1">M</th>
-                                        <th className="text-center py-1 px-1">R</th>
-                                        <th className="text-center py-1 px-1">W</th>
-                                        <th className="text-center py-1 px-1">Eco</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="text-gray-300">
-                                      {match.teamBStats?.bowling.map((player, idx) => (
                                         <tr key={idx} className="border-t border-slate-700">
                                           <td className="py-1 px-2 text-white">{player.player}</td>
                                           <td className="text-center py-1 px-1">{player.overs}</td>
