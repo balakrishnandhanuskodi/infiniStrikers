@@ -90,13 +90,9 @@ export function AdminPanel({
     return wholeOvers + (balls / 10);
   };
 
-  // Calculate total runs (runs + extras only, 4s is just a count)
+  // Calculate total runs from batting stats (runs are already auto-calculated per player)
   const calculateTotalRuns = (batting: BattingStats[]): number => {
-    return batting.reduce((sum, b) => {
-      const runs = (b.runs || 0);
-      const extras = (b.extras || 0);
-      return sum + runs + extras;
-    }, 0);
+    return batting.reduce((sum, b) => sum + (b.runs || 0), 0);
   };
 
   // Calculate totals from individual player stats
@@ -116,12 +112,20 @@ export function AdminPanel({
       // Merge team player names with existing stats data
       const batting = players.map((playerName, idx) => {
         const existingBatting = existingStats?.batting?.[idx];
+        const ones = existingBatting?.ones || 0;
+        const twos = existingBatting?.twos || 0;
+        const fours = existingBatting?.fours || 0;
+        const extras = existingBatting?.extras || 0;
+        // Auto-calculate runs: (1s × 1) + (2s × 2) + (4s × 4) + extras
+        const runs = (ones * 1) + (twos * 2) + (fours * 4) + extras;
         return {
           player: playerName, // Always use current team player name
-          runs: existingBatting?.runs || 0,
+          ones,
+          twos,
+          fours,
+          extras,
           balls: existingBatting?.balls || 0,
-          fours: existingBatting?.fours || 0,
-          extras: existingBatting?.extras || 0,
+          runs,
         };
       });
 
@@ -136,8 +140,8 @@ export function AdminPanel({
         };
       });
 
-      // Calculate totals from player stats (runs + extras only)
-      const totalRuns = batting.reduce((sum, b) => sum + b.runs + b.extras, 0);
+      // Calculate totals from player stats
+      const totalRuns = batting.reduce((sum, b) => sum + b.runs, 0);
       const totalWickets = bowling.reduce((sum, b) => sum + b.wickets, 0);
       const rawOvers = bowling.reduce((sum, b) => sum + b.overs, 0);
       const overs = formatCricketOvers(rawOvers);
@@ -168,12 +172,23 @@ export function AdminPanel({
     const stats = getMatchStats(matchId);
     const newStats = { ...stats };
     const batting = [...newStats[team].batting];
-    batting[playerIndex] = { ...batting[playerIndex], [field]: field === "player" ? value : parseFloat(value) || 0 };
+
+    // Update the field (except runs which is auto-calculated)
+    if (field !== "runs") {
+      const numValue = field === "player" ? value : Math.max(0, parseFloat(value) || 0);
+      batting[playerIndex] = { ...batting[playerIndex], [field]: numValue };
+    }
+
+    // Auto-calculate runs for this player: (1s × 1) + (2s × 2) + (4s × 4) + extras
+    const player = batting[playerIndex];
+    const calculatedRuns = ((player.ones || 0) * 1) + ((player.twos || 0) * 2) + ((player.fours || 0) * 4) + (player.extras || 0);
+    batting[playerIndex] = { ...batting[playerIndex], runs: calculatedRuns };
+
     newStats[team] = {
       ...newStats[team],
       batting,
-      // Auto-calculate total runs: runs + extras (4s is just a count)
-      totalRuns: batting.reduce((sum, b) => sum + (b.runs || 0) + (b.extras || 0), 0),
+      // Auto-calculate total runs from all players
+      totalRuns: batting.reduce((sum, b) => sum + (b.runs || 0), 0),
     };
     setMatchStats((prev) => ({ ...prev, [matchId]: newStats }));
   };
@@ -464,41 +479,61 @@ export function AdminPanel({
                                       placeholder="Player name"
                                     />
                                   </div>
-                                  <div className="w-16">
-                                    <Label className="text-xs text-gray-500">Runs</Label>
+                                  <div className="w-12">
+                                    <Label className="text-xs text-gray-500">1s</Label>
                                     <Input
                                       type="number"
-                                      value={player.runs}
-                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "runs", e.target.value)}
+                                      min="0"
+                                      value={player.ones || 0}
+                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "ones", e.target.value)}
                                       className="h-8"
                                     />
                                   </div>
-                                  <div className="w-16">
+                                  <div className="w-12">
+                                    <Label className="text-xs text-gray-500">2s</Label>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      value={player.twos || 0}
+                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "twos", e.target.value)}
+                                      className="h-8"
+                                    />
+                                  </div>
+                                  <div className="w-12">
+                                    <Label className="text-xs text-gray-500">4s</Label>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      value={player.fours || 0}
+                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "fours", e.target.value)}
+                                      className="h-8"
+                                    />
+                                  </div>
+                                  <div className="w-12">
+                                    <Label className="text-xs text-gray-500">Ext</Label>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      value={player.extras || 0}
+                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "extras", e.target.value)}
+                                      className="h-8"
+                                    />
+                                  </div>
+                                  <div className="w-12">
                                     <Label className="text-xs text-gray-500">Balls</Label>
                                     <Input
                                       type="number"
-                                      value={player.balls}
+                                      min="0"
+                                      value={player.balls || 0}
                                       onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "balls", e.target.value)}
                                       className="h-8"
                                     />
                                   </div>
                                   <div className="w-14">
-                                    <Label className="text-xs text-gray-500">4s</Label>
-                                    <Input
-                                      type="number"
-                                      value={player.fours}
-                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "fours", e.target.value)}
-                                      className="h-8"
-                                    />
-                                  </div>
-                                  <div className="w-16">
-                                    <Label className="text-xs text-gray-500">Extras</Label>
-                                    <Input
-                                      type="number"
-                                      value={player.extras}
-                                      onChange={(e) => updateBattingStats(selectedMatch, battingTeam, idx, "extras", e.target.value)}
-                                      className="h-8"
-                                    />
+                                    <Label className="text-xs text-gray-500">Runs</Label>
+                                    <div className="h-8 flex items-center justify-center bg-gray-100 border rounded-md font-semibold text-sm">
+                                      {player.runs || 0}
+                                    </div>
                                   </div>
                                   <Button
                                     type="button"

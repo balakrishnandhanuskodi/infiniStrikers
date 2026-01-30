@@ -187,10 +187,12 @@ function AdminPage() {
     return {
       batting: stats.batting?.map(b => ({
         player: b.player || "",
-        runs: b.runs ?? 0,
-        balls: b.balls ?? 0,
+        ones: b.ones ?? 0,
+        twos: b.twos ?? 0,
         fours: b.fours ?? 0,
         extras: b.extras ?? 0,
+        balls: b.balls ?? 0,
+        runs: b.runs ?? 0,
       })) || [],
       bowling: stats.bowling?.map(b => ({
         player: b.player || "",
