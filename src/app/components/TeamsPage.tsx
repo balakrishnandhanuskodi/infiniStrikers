@@ -1,17 +1,27 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
-import { Users, ArrowLeft } from "lucide-react";
+import { Users, ArrowLeft, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Team {
   id: string;
   name: string;
   players: string[];
+  player_photos?: string[];
 }
 
 interface TeamsPageProps {
   teams: Team[];
 }
+
+// Get initials from player name
+const getInitials = (name: string): string => {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+};
 
 export function TeamsPage({ teams }: TeamsPageProps) {
   const navigate = useNavigate();
@@ -54,17 +64,38 @@ export function TeamsPage({ teams }: TeamsPageProps) {
                 </CardHeader>
                 <CardContent className="pt-4">
                   <div className="space-y-2">
-                    {team.players.map((player, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-3 p-2 rounded bg-slate-800/50"
-                      >
-                        <span className="w-6 h-6 flex items-center justify-center bg-green-600 text-white text-xs font-semibold rounded-full">
-                          {index + 1}
-                        </span>
-                        <span className="text-gray-200">{player}</span>
-                      </div>
-                    ))}
+                    {team.players.map((player, index) => {
+                      const photoUrl = team.player_photos?.[index];
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 p-2 rounded bg-slate-800/50"
+                        >
+                          {/* Player photo or avatar */}
+                          {photoUrl ? (
+                            <img
+                              src={photoUrl}
+                              alt={player}
+                              className="w-10 h-10 rounded-full object-cover border-2 border-green-500"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center border-2 border-green-400">
+                              {player.trim() ? (
+                                <span className="text-white text-sm font-semibold">
+                                  {getInitials(player)}
+                                </span>
+                              ) : (
+                                <User className="w-5 h-5 text-white" />
+                              )}
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <span className="text-gray-200 font-medium">{player}</span>
+                          </div>
+                          <span className="text-xs text-gray-500">#{index + 1}</span>
+                        </div>
+                      );
+                    })}
                     {team.players.length === 0 && (
                       <p className="text-gray-500 text-sm text-center py-2">No players added</p>
                     )}

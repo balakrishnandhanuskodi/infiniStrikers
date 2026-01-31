@@ -15,6 +15,7 @@ interface Team {
   id: string;
   name: string;
   players: string[];
+  player_photos?: string[];
 }
 
 // Default data for seeding
@@ -84,6 +85,7 @@ function TeamsPageWrapper() {
     id: t.id,
     name: t.name,
     players: t.players || [],
+    player_photos: t.player_photos || [],
   }));
 
   return <TeamsPage teams={teams} />;
@@ -115,6 +117,7 @@ function AdminPage() {
     id: t.id,
     name: t.name,
     players: t.players || [],
+    player_photos: t.player_photos || [],
   }));
 
   // Seed all default data
@@ -259,17 +262,22 @@ function AdminPage() {
     }
   };
 
-  const handleUpdateTeam = async (teamName: string, players: string[]) => {
+  const handleUpdateTeam = async (teamName: string, players: string[], playerPhotos?: string[]) => {
     const sanitizedPlayers = players
       .filter((p): p is string => p !== undefined && p !== null && p.trim() !== "")
       .map(p => p.trim());
+
+    // Ensure photos array matches players array length
+    const sanitizedPhotos = playerPhotos
+      ? playerPhotos.slice(0, sanitizedPlayers.length)
+      : [];
 
     const team = dbTeams.find(t => t.name === teamName);
 
     if (team) {
       const { error } = await supabase
         .from("teams")
-        .update({ players: sanitizedPlayers })
+        .update({ players: sanitizedPlayers, player_photos: sanitizedPhotos })
         .eq("id", team.id);
 
       if (error) {
@@ -282,7 +290,7 @@ function AdminPage() {
     } else {
       const { error } = await supabase
         .from("teams")
-        .insert({ name: teamName, players: sanitizedPlayers });
+        .insert({ name: teamName, players: sanitizedPlayers, player_photos: sanitizedPhotos });
 
       if (error) {
         console.error("Insert error:", error);

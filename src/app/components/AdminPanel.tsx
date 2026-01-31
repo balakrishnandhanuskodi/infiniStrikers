@@ -1,25 +1,27 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
 import { Button } from "@/app/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import { Badge } from "@/app/components/ui/badge";
-import { LogOut, Save, Users, TrendingUp, Database, Plus, Loader2, Calendar } from "lucide-react";
+import { LogOut, Save, Users, TrendingUp, Database, Plus, Loader2, Calendar, Camera, X } from "lucide-react";
 import { Match, BattingStats, BowlingStats, TeamStats } from "./PublicFixtures";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
+import { uploadPlayerPhoto } from "@/lib/supabase";
 
 interface Team {
   name: string;
   players: string[];
+  player_photos?: string[];
 }
 
 interface AdminPanelProps {
   matches: Match[];
   teams: Team[];
   onUpdateMatch: (matchId: string, teamAStats: TeamStats, teamBStats: TeamStats, status: Match["status"]) => void;
-  onUpdateTeam: (teamName: string, players: string[]) => void;
+  onUpdateTeam: (teamName: string, players: string[], playerPhotos?: string[]) => void;
   onRenameTeam?: (oldName: string, newName: string) => void;
   onLogout: () => void;
   onSeedData?: () => void;
@@ -56,6 +58,9 @@ export function AdminPanel({
   const [selectedMatch, setSelectedMatch] = useState<string>("");
   const [editingTeams, setEditingTeams] = useState<Record<string, string[]>>({});
   const [editingTeamNames, setEditingTeamNames] = useState<Record<string, string>>({});
+  const [editingPlayerPhotos, setEditingPlayerPhotos] = useState<Record<string, string[]>>({});
+  const [uploadingPhoto, setUploadingPhoto] = useState<{ teamName: string; index: number } | null>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Sort matches by date (ascending)
   const sortedMatches = [...matches].sort((a, b) => {
@@ -250,7 +255,9 @@ export function AdminPanel({
   };
 
   const handleSaveTeam = (originalTeamName: string) => {
-    const players = editingTeams[originalTeamName];
+    const team = teams.find((t) => t.name === originalTeamName);
+    const players = editingTeams[originalTeamName] || team?.players || [];
+    const playerPhotos = editingPlayerPhotos[originalTeamName] || team?.player_photos || [];
     const newTeamName = editingTeamNames[originalTeamName];
 
     // If team name changed, rename first
@@ -264,11 +271,12 @@ export function AdminPanel({
       });
     }
 
-    // Update players
-    if (players) {
-      const teamToUpdate = newTeamName?.trim() || originalTeamName;
-      onUpdateTeam(teamToUpdate, players.filter((p) => p.trim() !== ""));
-    }
+    // Update players and photos
+    const teamToUpdate = newTeamName?.trim() || originalTeamName;
+    const filteredPlayers = players.filter((p) => p.trim() !== "");
+    // Keep photos aligned with players (trim excess photos)
+    const filteredPhotos = playerPhotos.slice(0, filteredPlayers.length);
+    onUpdateTeam(teamToUpdate, filteredPlayers, filteredPhotos);
   };
 
   const handleAddNewMatch = () => {
@@ -285,6 +293,71 @@ export function AdminPanel({
 
   const getEditingPlayers = (team: Team) => {
     return editingTeams[team.name] || team.players;
+  };
+
+  const getEditingPlayerPhotos = (team: Team) => {
+    return editingPlayerPhotos[team.name] || team.player_photos || [];
+  };
+
+  const handlePhotoUpload = async (teamName: string, playerIndex: number, file: File) => {
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image size must be less than 2MB");
+      return;
+    }
+
+    setUploadingPhoto({ teamName, index: playerIndex });
+
+    try {
+      const photoUrl = await uploadPlayerPhoto(teamName, playerIndex, file);
+
+      const team = teams.find((t) => t.name === teamName);
+      if (!team) return;
+
+      const currentPhotos = editingPlayerPhotos[teamName] || team.player_photos || [];
+      const newPhotos = [...currentPhotos];
+      // Ensure array is long enough
+      while (newPhotos.length <= playerIndex) {
+        newPhotos.push("");
+      }
+      newPhotos[playerIndex] = photoUrl;
+
+      setEditingPlayerPhotos((prev) => ({
+        ...prev,
+        [teamName]: newPhotos,
+      }));
+
+      toast.success("Photo uploaded successfully");
+    } catch (error) {
+      toast.error("Failed to upload photo");
+      console.error(error);
+    } finally {
+      setUploadingPhoto(null);
+    }
+  };
+
+  const handleRemovePhoto = (teamName: string, playerIndex: number) => {
+    const team = teams.find((t) => t.name === teamName);
+    if (!team) return;
+
+    const currentPhotos = editingPlayerPhotos[teamName] || team.player_photos || [];
+    const newPhotos = [...currentPhotos];
+    if (playerIndex < newPhotos.length) {
+      newPhotos[playerIndex] = "";
+    }
+
+    setEditingPlayerPhotos((prev) => ({
+      ...prev,
+      [teamName]: newPhotos,
+    }));
   };
 
   const selectedMatchData = matches.find((m) => m.id === selectedMatch);
@@ -671,6 +744,7 @@ export function AdminPanel({
               ) : (
                 teams.map((team) => {
                   const players = getEditingPlayers(team);
+                  const playerPhotos = getEditingPlayerPhotos(team);
                   const teamName = editingTeamNames[team.name] || team.name;
                   return (
                     <Card key={team.name}>
@@ -686,17 +760,71 @@ export function AdminPanel({
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-3">
-                        {players.map((player, index) => (
-                          <div key={index} className="flex gap-2 items-center">
-                            <span className="text-sm font-medium text-gray-500 w-8">{index + 1}.</span>
-                            <Input
-                              placeholder={`Player ${index + 1} name`}
-                              value={player}
-                              onChange={(e) => handlePlayerChange(team.name, index, e.target.value)}
-                              className="flex-1"
-                            />
-                          </div>
-                        ))}
+                        {players.map((player, index) => {
+                          const photoUrl = playerPhotos[index] || "";
+                          const isUploading = uploadingPhoto?.teamName === team.name && uploadingPhoto?.index === index;
+                          const inputId = `photo-${team.name}-${index}`;
+
+                          return (
+                            <div key={index} className="flex gap-2 items-center">
+                              <span className="text-sm font-medium text-gray-500 w-6">{index + 1}.</span>
+
+                              {/* Photo upload/display */}
+                              <div className="relative">
+                                <input
+                                  type="file"
+                                  id={inputId}
+                                  accept="image/*"
+                                  className="hidden"
+                                  ref={(el) => { fileInputRefs.current[inputId] = el; }}
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      handlePhotoUpload(team.name, index, file);
+                                      e.target.value = "";
+                                    }
+                                  }}
+                                />
+                                {photoUrl ? (
+                                  <div className="relative group">
+                                    <img
+                                      src={photoUrl}
+                                      alt={player}
+                                      className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemovePhoto(team.name, index)}
+                                      className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => fileInputRefs.current[inputId]?.click()}
+                                    disabled={isUploading}
+                                    className="w-10 h-10 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                                  >
+                                    {isUploading ? (
+                                      <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                                    ) : (
+                                      <Camera className="w-4 h-4 text-gray-400" />
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+
+                              <Input
+                                placeholder={`Player ${index + 1} name`}
+                                value={player}
+                                onChange={(e) => handlePlayerChange(team.name, index, e.target.value)}
+                                className="flex-1"
+                              />
+                            </div>
+                          );
+                        })}
                         <Button onClick={() => handleSaveTeam(team.name)} className="w-full">
                           <Save className="w-4 h-4 mr-2" />
                           Save {teamName}
