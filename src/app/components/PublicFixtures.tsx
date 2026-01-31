@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
+import { Button } from "@/app/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
-import { Calendar, Clock, TrendingUp } from "lucide-react";
+import { Calendar, Clock, TrendingUp, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export interface BattingStats {
   player: string;
@@ -65,6 +67,8 @@ const parseDateString = (dateStr: string): number => {
 };
 
 export function PublicFixtures({ matches }: PublicFixturesProps) {
+  const navigate = useNavigate();
+
   // Sort matches by date first
   const sortedMatches = [...matches].sort((a, b) => {
     const dateA = parseDateString(a.date);
@@ -97,7 +101,16 @@ export function PublicFixtures({ matches }: PublicFixturesProps) {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-white mb-1">Cricket Tournament 2026</h1>
-          <p className="text-green-200 text-sm">6:00 PM – 7:00 PM | Reporting: 5:45 PM</p>
+          <p className="text-green-200 text-sm mb-3">6:00 PM – 7:00 PM | Reporting: 5:45 PM</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/teams")}
+            className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+          >
+            <Users className="w-4 h-4 mr-2" />
+            View Teams
+          </Button>
         </div>
 
         <div className="space-y-4">

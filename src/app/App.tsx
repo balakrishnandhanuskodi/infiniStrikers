@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { PublicFixtures, Match as UIMatch, TeamStats } from "@/app/components/PublicFixtures";
+import { TeamsPage } from "@/app/components/TeamsPage";
 import { AdminLogin } from "@/app/components/AdminLogin";
 import { AdminPanel } from "@/app/components/AdminPanel";
 import { Toaster } from "@/app/components/ui/sonner";
@@ -62,6 +63,30 @@ function PublicPage() {
   }));
 
   return <PublicFixtures matches={matches} />;
+}
+
+// Teams page component
+function TeamsPageWrapper() {
+  const { teams: dbTeams, loading } = useTeams();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p>Loading teams...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const teams = dbTeams.map(t => ({
+    id: t.id,
+    name: t.name,
+    players: t.players || [],
+  }));
+
+  return <TeamsPage teams={teams} />;
 }
 
 // Admin page component
@@ -346,6 +371,7 @@ function App() {
     <>
       <Routes>
         <Route path="/" element={<PublicPage />} />
+        <Route path="/teams" element={<TeamsPageWrapper />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
