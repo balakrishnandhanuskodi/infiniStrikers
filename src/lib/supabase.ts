@@ -36,3 +36,45 @@ export const signOut = async () => {
     throw error
   }
 }
+
+// Helper function to upload player photo
+export const uploadPlayerPhoto = async (
+  teamName: string,
+  playerIndex: number,
+  file: File
+): Promise<string> => {
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${teamName.replace(/\s+/g, '-').toLowerCase()}-player-${playerIndex}-${Date.now()}.${fileExt}`
+  const filePath = `${fileName}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('player-photos')
+    .upload(filePath, file, { upsert: true })
+
+  if (uploadError) {
+    console.error('Error uploading photo:', uploadError.message)
+    throw uploadError
+  }
+
+  const { data } = supabase.storage
+    .from('player-photos')
+    .getPublicUrl(filePath)
+
+  return data.publicUrl
+}
+
+// Helper function to delete player photo
+export const deletePlayerPhoto = async (photoUrl: string): Promise<void> => {
+  // Extract file path from URL
+  const urlParts = photoUrl.split('/player-photos/')
+  if (urlParts.length < 2) return
+
+  const filePath = urlParts[1]
+  const { error } = await supabase.storage
+    .from('player-photos')
+    .remove([filePath])
+
+  if (error) {
+    console.error('Error deleting photo:', error.message)
+  }
+}

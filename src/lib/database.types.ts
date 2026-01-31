@@ -39,6 +39,7 @@ export interface Database {
           id: string
           name: string
           players: string[]
+          player_photos: string[]
           created_at: string
           updated_at: string
         }
@@ -46,6 +47,7 @@ export interface Database {
           id?: string
           name: string
           players?: string[]
+          player_photos?: string[]
           created_at?: string
           updated_at?: string
         }
@@ -53,6 +55,7 @@ export interface Database {
           id?: string
           name?: string
           players?: string[]
+          player_photos?: string[]
           created_at?: string
           updated_at?: string
         }
