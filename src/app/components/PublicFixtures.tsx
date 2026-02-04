@@ -4,6 +4,7 @@ import { Button } from "@/app/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/app/components/ui/tabs";
 import { Calendar, Clock, TrendingUp, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Sidebar } from "./Sidebar";
 
 export interface BattingStats {
   player: string;
@@ -43,8 +44,16 @@ export interface Match {
   type: "group" | "semi-final" | "final";
 }
 
+interface Team {
+  id: string;
+  name: string;
+  players: string[];
+  player_photos?: string[];
+}
+
 interface PublicFixturesProps {
   matches: Match[];
+  teams: Team[];
 }
 
 // Parse date string like "9th February" to a sortable number
@@ -66,7 +75,7 @@ const parseDateString = (dateStr: string): number => {
   return month * 100 + day;
 };
 
-export function PublicFixtures({ matches }: PublicFixturesProps) {
+export function PublicFixtures({ matches, teams }: PublicFixturesProps) {
   const navigate = useNavigate();
 
   // Sort matches by date first
@@ -98,7 +107,7 @@ export function PublicFixtures({ matches }: PublicFixturesProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 py-6 px-4">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-white mb-1">Cricket Tournament 2026</h1>
           <p className="text-green-200 text-sm mb-3">6:00 PM – 7:00 PM | Reporting: 5:45 PM</p>
@@ -109,11 +118,14 @@ export function PublicFixtures({ matches }: PublicFixturesProps) {
             className="bg-white/10 border-white/20 text-white hover:bg-white/20"
           >
             <Users className="w-4 h-4 mr-2" />
-            View Teams
+            View All Teams
           </Button>
         </div>
 
-        <div className="space-y-4">
+        {/* 70-30 Layout: Matches (left) | Sidebar (right) */}
+        <div className="flex flex-col lg:flex-row gap-4">
+          {/* Main Content - 70% */}
+          <div className="w-full lg:w-[70%] space-y-4">
           {sortedDates.map((date) => {
             const dayMatches = groupedMatches[date];
             return (
@@ -337,6 +349,14 @@ export function PublicFixtures({ matches }: PublicFixturesProps) {
             </div>
             );
           })}
+          </div>
+
+          {/* Sidebar - 30% */}
+          <div className="w-full lg:w-[30%]">
+            <div className="lg:sticky lg:top-6">
+              <Sidebar matches={matches} teams={teams} />
+            </div>
+          </div>
         </div>
       </div>
     </div>

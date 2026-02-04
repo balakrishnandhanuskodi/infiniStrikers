@@ -38,14 +38,15 @@ const defaultTeamsData = [
 
 // Public page component
 function PublicPage() {
-  const { matches: dbMatches, loading } = useMatches();
+  const { matches: dbMatches, loading: matchesLoading } = useMatches();
+  const { teams: dbTeams, loading: teamsLoading } = useTeams();
 
-  if (loading) {
+  if (matchesLoading || teamsLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-700 flex items-center justify-center">
         <div className="text-center text-white">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-          <p>Loading matches...</p>
+          <p>Loading...</p>
         </div>
       </div>
     );
@@ -63,7 +64,14 @@ function PublicPage() {
     teamBStats: m.team_b_stats || undefined,
   }));
 
-  return <PublicFixtures matches={matches} />;
+  const teams: Team[] = dbTeams.map(t => ({
+    id: t.id,
+    name: t.name,
+    players: t.players || [],
+    player_photos: t.player_photos || [],
+  }));
+
+  return <PublicFixtures matches={matches} teams={teams} />;
 }
 
 // Teams page component
