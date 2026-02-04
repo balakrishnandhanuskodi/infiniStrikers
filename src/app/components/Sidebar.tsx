@@ -1,7 +1,19 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
-import { Users, User } from "lucide-react";
+import { Users, User, ScrollText, ChevronDown, ChevronUp } from "lucide-react";
 import { PointsTable } from "./PointsTable";
 import type { Match } from "./PublicFixtures";
+
+const TOURNAMENT_GUIDELINES = [
+  "Matches to be played between 6.00 PM – 7.00 PM.",
+  "5.45 PM all team players should be there and all players should be there till the last ball is bowled for the day irrespective of their match schedule.",
+  "Matches will be 5 Overs per side.",
+  "For Tied match, the result will be decided through Super Over.",
+  "Every player will be allowed to bowl only 1 Over per match.",
+  "1 Run will be added to the Team Score for every Wide and No Ball. Double Bounce before the Batsman will be called Dead Ball and No Run will be given (even it goes wide).",
+  "1 Run will be added to the Team every time the ball goes to the Adjacent House irrespective of where it gets pitched inside our office (within the Boundary Line). If it goes directly, it will be treated as Batsman Out.",
+  "All decisions will be from the Umpire and his decision is final. No arguments allowed. Discussion with Umpire will be done only by the Captains. No Team player will discuss the issue with neither the Umpire nor Opponent. The Team that argues will be penalized.",
+];
 
 interface Team {
   id: string;
@@ -25,6 +37,8 @@ const getInitials = (name: string): string => {
 };
 
 export function Sidebar({ matches, teams }: SidebarProps) {
+  const [guidelinesExpanded, setGuidelinesExpanded] = useState(false);
+
   return (
     <div className="space-y-4">
       {/* Points Table */}
@@ -90,6 +104,37 @@ export function Sidebar({ matches, teams }: SidebarProps) {
             </div>
           )}
         </CardContent>
+      </Card>
+
+      {/* Tournament Guidelines - Collapsible */}
+      <Card className="border-green-700/50 bg-slate-900/30 backdrop-blur">
+        <CardHeader
+          className="pb-2 pt-3 px-3 cursor-pointer hover:bg-slate-800/30 transition-colors"
+          onClick={() => setGuidelinesExpanded(!guidelinesExpanded)}
+        >
+          <CardTitle className="text-xs text-gray-400 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <ScrollText className="w-3 h-3" />
+              Tournament Guidelines
+            </span>
+            {guidelinesExpanded ? (
+              <ChevronUp className="w-3 h-3" />
+            ) : (
+              <ChevronDown className="w-3 h-3" />
+            )}
+          </CardTitle>
+        </CardHeader>
+        {guidelinesExpanded && (
+          <CardContent className="px-3 pb-3 pt-0">
+            <ol className="space-y-2 text-[10px] text-gray-400 list-decimal list-outside ml-3">
+              {TOURNAMENT_GUIDELINES.map((guideline, index) => (
+                <li key={index} className="leading-relaxed">
+                  {guideline}
+                </li>
+              ))}
+            </ol>
+          </CardContent>
+        )}
       </Card>
     </div>
   );
