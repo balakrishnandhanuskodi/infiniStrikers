@@ -4,16 +4,44 @@ import { Users, User, ScrollText, ChevronDown, ChevronUp } from "lucide-react";
 import { PointsTable } from "./PointsTable";
 import type { Match } from "./PublicFixtures";
 
-const TOURNAMENT_GUIDELINES = [
-  "Matches to be played between 6.00 PM – 7.00 PM.",
-  "5.45 PM all team players should be there and all players should be there till the last ball is bowled for the day irrespective of their match schedule.",
-  "Matches will be 5 Overs per side.",
-  "For Tied match, the result will be decided through Super Over.",
-  "Every player will be allowed to bowl only 1 Over per match.",
-  "1 Run will be added to the Team Score for every Wide and No Ball. Double Bounce before the Batsman will be called Dead Ball and No Run will be given (even it goes wide).",
-  "1 Run will be added to the Team every time the ball goes to the Adjacent House irrespective of where it gets pitched inside our office (within the Boundary Line). If it goes directly, it will be treated as Batsman Out.",
-  "All decisions will be from the Umpire and his decision is final. No arguments allowed. Discussion with Umpire will be done only by the Captains. No Team player will discuss the issue with neither the Umpire nor Opponent. The Team that argues will be penalized.",
-];
+// Guidelines with bold formatting - using JSX
+const GuidelinesList = () => (
+  <ol className="space-y-2 text-[10px] text-gray-100 list-decimal list-outside ml-3">
+    <li className="leading-relaxed">
+      Matches to be played between <span className="font-bold underline">6.00 PM – 7.00 PM</span>.
+    </li>
+    <li className="leading-relaxed">
+      <span className="font-bold underline">5.45 PM</span> all team players should be there and all players should be there till the last ball is bowled for the day irrespective of their match schedule.
+    </li>
+    <li className="leading-relaxed">
+      Matches will be <span className="font-bold">5 Overs</span> per side.
+    </li>
+    <li className="leading-relaxed">
+      For Tied match, the result will be decided through <span className="font-bold">Super Over</span>.
+    </li>
+    <li className="leading-relaxed">
+      Every player will be allowed to bowl only <span className="font-bold">1 Over</span> per match.
+    </li>
+    <li className="leading-relaxed">
+      <span className="font-bold">1 Run</span> will be added to the Team Score for every <span className="font-bold">Wide</span> and <span className="font-bold">No Ball</span>. <span className="font-bold">Double Bounce</span> before the Batsman will be called <span className="font-bold">Dead Ball</span> and No Run will be given (even it goes wide).
+    </li>
+    <li className="leading-relaxed">
+      <span className="font-bold">1 Run</span> will be added to the Team every time the ball goes to the <span className="font-bold">Adjacent House</span> irrespective of where it gets pitched inside our office (within the Boundary Line). If it goes directly, it will be treated as <span className="font-bold">Batsman Out</span>.
+    </li>
+    <li className="leading-relaxed">
+      All decisions will be from the Umpire and <span className="font-bold">his decision is final</span>. No arguments allowed. Discussion with Umpire will be done only by the Captains. No Team player will discuss the issue with neither the <span className="font-bold">Umpire</span> nor <span className="font-bold">Opponent</span>. The Team that argues will be penalized.
+    </li>
+    <li className="leading-relaxed">
+      The Umpire will be from the Non-Playing Team and he will have 1 Assistant from his Team.
+    </li>
+    <li className="leading-relaxed">
+      <span className="font-bold">1 New Ball and 2 Spare Balls</span> will be used for every match.
+    </li>
+    <li className="leading-relaxed">
+      <span className="font-bold">New Ball</span> will be selected by both the Captains according to their choice from the pool of available balls.
+    </li>
+  </ol>
+);
 
 interface Team {
   id: string;
@@ -112,7 +140,7 @@ export function Sidebar({ matches, teams }: SidebarProps) {
           className="pb-2 pt-3 px-3 cursor-pointer hover:bg-slate-800/30 transition-colors"
           onClick={() => setGuidelinesExpanded(!guidelinesExpanded)}
         >
-          <CardTitle className="text-xs text-gray-400 flex items-center justify-between">
+          <CardTitle className="text-xs text-gray-200 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <ScrollText className="w-3 h-3" />
               Tournament Guidelines
@@ -126,13 +154,7 @@ export function Sidebar({ matches, teams }: SidebarProps) {
         </CardHeader>
         {guidelinesExpanded && (
           <CardContent className="px-3 pb-3 pt-0">
-            <ol className="space-y-2 text-[10px] text-gray-400 list-decimal list-outside ml-3">
-              {TOURNAMENT_GUIDELINES.map((guideline, index) => (
-                <li key={index} className="leading-relaxed">
-                  {guideline}
-                </li>
-              ))}
-            </ol>
+            <GuidelinesList />
           </CardContent>
         )}
       </Card>
